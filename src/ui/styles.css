@@ -10,6 +10,7 @@ button{font:inherit;color:inherit}
 .btn.active{border-color:var(--cyan);color:var(--cyan)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#1b1500;font-weight:700}
 .btn.big{min-height:56px;padding:0 32px;font-size:1.15rem}
+.btn.small{min-height:34px;padding:0 12px;font-size:.85rem}
 :focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
 .start{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:24px;
 background:repeating-linear-gradient(135deg,#141824 0 24px,#11141c 24px 48px)}
@@ -33,6 +34,12 @@ h3{margin:0 0 6px}h4{margin:16px 0 8px;color:var(--mute);font-weight:600}
 .sw{width:44px;height:44px;border-radius:50%;border:3px solid var(--line);cursor:pointer;padding:0}
 .sw.on{border-color:var(--cyan)}.sw.static{width:28px;height:28px;cursor:default;flex:none}
 .tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.tabs.scroll{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+.tabs.scroll .btn{flex:none}
+.muted{color:var(--mute)}
+.stat-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;color:var(--mute);font-size:.85rem;margin-bottom:8px}
+.custom-paint{display:flex;gap:10px;align-items:center;margin-bottom:14px}
+.custom-paint input[type="color"]{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:none;padding:0;cursor:pointer}
 .rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .rows li{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
 .grow{flex:1}.rows em{color:var(--mute);font-style:normal;padding-right:8px}

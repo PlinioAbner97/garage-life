@@ -6,7 +6,9 @@ import type { PanelId } from './App';
 export function Hud({ panel, onPanel }: { panel: PanelId; onPanel: (p: PanelId) => void }) {
   const s = useGame();
   const lv = levelFromXp(s.xp), lo = xpForLevel(lv), hi = xpForLevel(lv + 1);
-  const nav: [Exclude<PanelId, null>, string][] = [['garage', 'Garaje'], ['shop', 'Tienda'], ['inventory', 'Inventario']];
+  const nav: [Exclude<PanelId, null>, string][] = [
+    ['garage', 'Garaje'], ['collection', 'Colección'], ['inventory', 'Inventario'], ['workshop', 'Taller'],
+  ];
   return (
     <>
       <div className="hud-top">

@@ -1,31 +1,62 @@
 import Phaser from 'phaser';
-import { actions, getState, subscribe } from '../core/store';
-import { modelById, type VehicleModel } from '../data/catalog';
+import { activeCar, floorTier, garageCapacity, getPreview, getState, lightingTier, liftCount, subscribe } from '../core/store';
+import type { CarBuild } from '../core/types';
+import { resolvePaintColor } from '../data/parts';
+import { vehicleById } from '../data/vehicles';
 import { bus } from './bus';
 import { drawCar } from './render/car';
-import { drawGarage } from './render/garage';
+import {
+  ACTIVE_ANCHOR, BARREL, STORAGE_SLOTS, TIRE_RACK, TOOL_CABINET,
+  drawDecor, drawFloor, drawLifts, drawLighting, drawShell, drawStorageSlot,
+} from './render/garage';
 import { iso } from './render/iso';
 
-interface CarView { root: Phaser.GameObjects.Container; gfx: Phaser.GameObjects.Graphics; ring: Phaser.GameObjects.Graphics; key: string }
-const SLOTS = [{ x: 3.1, y: 3.1 }, { x: 3.1, y: 6.6 }];
-
 export class GarageScene extends Phaser.Scene {
-  private views = new Map<string, CarView>();
+  private carGfx!: Phaser.GameObjects.Graphics;
+  private carZone!: Phaser.GameObjects.Zone;
+  private carAnchor = { x: 0, y: 0 };
+  private floorGfx!: Phaser.GameObjects.Graphics;
+  private liftsGfx!: Phaser.GameObjects.Graphics;
+  private lightGfx!: Phaser.GameObjects.Graphics;
+  private storageGfx!: Phaser.GameObjects.Graphics;
+  private carKey = '';
+  private sig = '';
   private lastPinch = 0;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>;
   constructor() { super('garage'); }
 
   create() {
-    drawGarage(this.add.graphics());
     const cam = this.cameras.main;
     cam.setBackgroundColor(0x11141c);
+    drawShell(this.add.graphics());
+    this.floorGfx = this.add.graphics();
+    this.liftsGfx = this.add.graphics();
+    drawDecor(this.add.graphics());
+    this.lightGfx = this.add.graphics();
+    this.storageGfx = this.add.graphics();
+    void BARREL; void TIRE_RACK;
+
+    STORAGE_SLOTS.forEach((pos) => {
+      const c = iso(pos.x + 0.75, pos.y + 0.42, 0.2);
+      this.add.zone(c.x, c.y, 100, 70).setInteractive({ useHandCursor: true })
+        .on('pointerup', (ptr: Phaser.Input.Pointer) => { if (ptr.getDistance() < 8) bus.emit('open-panel', 'collection'); });
+    });
+
+    const toolC = iso(TOOL_CABINET.x + 0.4, TOOL_CABINET.y + 0.4, 0.5);
+    this.add.zone(toolC.x, toolC.y, 90, 110).setInteractive({ useHandCursor: true })
+      .on('pointerup', (ptr: Phaser.Input.Pointer) => { if (ptr.getDistance() < 8) bus.emit('open-panel', 'workshop'); });
+
+    this.carAnchor = iso(ACTIVE_ANCHOR.x, ACTIVE_ANCHOR.y, 0.12);
+    this.carGfx = this.add.graphics().setPosition(this.carAnchor.x, this.carAnchor.y);
+    this.carZone = this.add.zone(this.carAnchor.x, this.carAnchor.y, 210, 120).setInteractive({ useHandCursor: true });
+    this.carZone.on('pointerup', (ptr: Phaser.Input.Pointer) => { if (ptr.getDistance() < 8) bus.emit('open-panel', 'garage'); });
+
     this.recenter();
     this.input.addPointer(1);
-
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
       const a = this.input.pointer1, b = this.input.pointer2;
-      if (a.isDown && b.isDown) { // pellizco táctil
+      if (a.isDown && b.isDown) {
         const d = Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y);
         if (this.lastPinch) this.setZoom(cam.zoom * (d / this.lastPinch));
         this.lastPinch = d; return;
@@ -33,10 +64,7 @@ export class GarageScene extends Phaser.Scene {
       this.lastPinch = 0;
       if (p.isDown) { cam.scrollX -= (p.x - p.prevPosition.x) / cam.zoom; cam.scrollY -= (p.y - p.prevPosition.y) / cam.zoom; }
     });
-    this.input.on('pointerup', (p: Phaser.Input.Pointer, over: unknown[]) => {
-      this.lastPinch = 0;
-      if (over.length === 0 && p.getDistance() < 8) actions.select(null);
-    });
+    this.input.on('pointerup', () => { this.lastPinch = 0; });
     this.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => this.setZoom(cam.zoom * (dy > 0 ? 0.9 : 1.1)));
 
     const kb = this.input.keyboard!;
@@ -49,6 +77,7 @@ export class GarageScene extends Phaser.Scene {
 
     const zoomIn = () => this.setZoom(cam.zoom * 1.2), zoomOut = () => this.setZoom(cam.zoom / 1.2), re = () => this.recenter();
     bus.on('zoom-in', zoomIn); bus.on('zoom-out', zoomOut); bus.on('recenter', re);
+
     const unsub = subscribe(() => this.sync());
     this.sync();
     this.events.once('shutdown', () => { unsub(); bus.off('zoom-in', zoomIn); bus.off('zoom-out', zoomOut); bus.off('recenter', re); });
@@ -63,32 +92,38 @@ export class GarageScene extends Phaser.Scene {
   }
 
   private setZoom(z: number) { this.cameras.main.setZoom(Phaser.Math.Clamp(z, 0.4, 2.5)); }
-  private recenter() {
-    const cam = this.cameras.main;
-    cam.setZoom(Phaser.Math.Clamp(this.scale.width / 700, 0.5, 1.3));
-    cam.centerOn(0, 150);
-  }
-
-  private makeView(uid: string, m: VehicleModel, i: number): CarView {
-    const p = iso(SLOTS[i % SLOTS.length].x, SLOTS[i % SLOTS.length].y, i === 0 ? 0.12 : 0);
-    const c = iso(m.length / 2, m.width / 2, 0);
-    const ring = this.add.graphics().lineStyle(3, 0x4dd0ff, 1).strokeEllipse(c.x, c.y + 4, (m.length + m.width) * 38, (m.length + m.width) * 19).setVisible(false);
-    const gfx = this.add.graphics();
-    const zone = this.add.zone(c.x, c.y - 18, 190, 100).setInteractive({ useHandCursor: true });
-    zone.on('pointerup', (ptr: Phaser.Input.Pointer) => { if (ptr.getDistance() < 8) actions.select(uid); });
-    const root = this.add.container(p.x, p.y, [ring, gfx, zone]).setDepth(p.y);
-    return { root, gfx, ring, key: '' };
-  }
+  private recenter() { const cam = this.cameras.main; cam.setZoom(Phaser.Math.Clamp(this.scale.width / 700, 0.5, 1.3)); cam.centerOn(70, 170); }
 
   private sync() {
     const s = getState();
-    s.cars.forEach((car, i) => {
-      const m = modelById(car.modelId);
-      let v = this.views.get(car.uid);
-      if (!v) { v = this.makeView(car.uid, m, i); this.views.set(car.uid, v); }
-      const key = `${car.paint}-${car.rims}`;
-      if (v.key !== key) { drawCar(v.gfx, m, car.paint, car.rims); v.key = key; }
-      v.ring.setVisible(s.selectedUid === car.uid);
-    });
+    const car = activeCar();
+    const m = vehicleById(car.modelId);
+    const pv = getPreview();
+    const build: CarBuild = pv && pv.uid === car.uid ? { ...car.build, [pv.category]: pv.value } : car.build;
+    const carKey = JSON.stringify(build) + '|' + car.modelId;
+    if (carKey !== this.carKey) {
+      drawCar(this.carGfx, m, build);
+      this.carGfx.setScale(build.facing, 1);
+      const centerLocal = iso(m.length / 2, m.width / 2, 0);
+      this.carZone.setPosition(this.carAnchor.x + centerLocal.x, this.carAnchor.y + centerLocal.y - 20);
+      this.carKey = carKey;
+    }
+
+    const sig = `${liftCount()}|${floorTier()}|${lightingTier()}|${s.cars.length}|${garageCapacity()}|${s.selectedUid}`;
+    if (sig !== this.sig) {
+      this.floorGfx.clear(); drawFloor(this.floorGfx, floorTier());
+      this.liftsGfx.clear(); drawLifts(this.liftsGfx, liftCount());
+      this.lightGfx.clear(); drawLighting(this.lightGfx, lightingTier());
+      this.storageGfx.clear();
+      const others = s.cars.filter((c) => c.uid !== s.selectedUid);
+      const cap = garageCapacity();
+      STORAGE_SLOTS.forEach((pos, i) => {
+        const locked = i >= cap - 1; // -1 porque un auto siempre está en el elevador principal
+        const oc = others[i];
+        const color = oc ? resolvePaintColor(oc.build.paint) : 0x2a2f3b;
+        drawStorageSlot(this.storageGfx, pos, !!oc, locked, color);
+      });
+      this.sig = sig;
+    }
   }
 }
