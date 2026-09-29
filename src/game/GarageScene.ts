@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { activeCar, floorTier, garageCapacity, getPreview, getState, lightingTier, liftCount, subscribe } from '../core/store';
+import { floorTier, garageCapacity, getDisplayVehicle, getPreview, getState, lightingTier, liftCount, subscribe } from '../core/store';
 import type { CarBuild } from '../core/types';
 import { resolvePaintColor } from '../data/parts';
 import { vehicleById } from '../data/vehicles';
@@ -50,7 +50,9 @@ export class GarageScene extends Phaser.Scene {
     this.carAnchor = iso(ACTIVE_ANCHOR.x, ACTIVE_ANCHOR.y, 0.12);
     this.carGfx = this.add.graphics().setPosition(this.carAnchor.x, this.carAnchor.y);
     this.carZone = this.add.zone(this.carAnchor.x, this.carAnchor.y, 210, 120).setInteractive({ useHandCursor: true });
-    this.carZone.on('pointerup', (ptr: Phaser.Input.Pointer) => { if (ptr.getDistance() < 8) bus.emit('open-panel', 'garage'); });
+    this.carZone.on('pointerup', (ptr: Phaser.Input.Pointer) => {
+      if (ptr.getDistance() < 8) bus.emit('open-panel', getDisplayVehicle().isJob ? 'jobs' : 'garage');
+    });
 
     this.recenter();
     this.input.addPointer(1);
@@ -96,11 +98,11 @@ export class GarageScene extends Phaser.Scene {
 
   private sync() {
     const s = getState();
-    const car = activeCar();
-    const m = vehicleById(car.modelId);
+    const disp = getDisplayVehicle();
+    const m = vehicleById(disp.modelId);
     const pv = getPreview();
-    const build: CarBuild = pv && pv.uid === car.uid ? { ...car.build, [pv.category]: pv.value } : car.build;
-    const carKey = JSON.stringify(build) + '|' + car.modelId;
+    const build: CarBuild = pv && pv.uid === disp.uid ? { ...disp.build, [pv.category]: pv.value } : disp.build;
+    const carKey = JSON.stringify(build) + '|' + disp.modelId + '|' + disp.isJob;
     if (carKey !== this.carKey) {
       drawCar(this.carGfx, m, build);
       this.carGfx.setScale(build.facing, 1);

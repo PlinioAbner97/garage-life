@@ -1,13 +1,15 @@
 import { fmtMoney, levelFromXp, xpForLevel } from '../core/economy';
-import { useGame } from '../core/store';
+import { actions, useFocusedJobId, useGame } from '../core/store';
 import { bus } from '../game/bus';
 import type { PanelId } from './App';
 
 export function Hud({ panel, onPanel }: { panel: PanelId; onPanel: (p: PanelId) => void }) {
   const s = useGame();
+  const focusedId = useFocusedJobId();
+  const focusedJob = s.activeJobs.find((j) => j.id === focusedId);
   const lv = levelFromXp(s.xp), lo = xpForLevel(lv), hi = xpForLevel(lv + 1);
   const nav: [Exclude<PanelId, null>, string][] = [
-    ['garage', 'Garaje'], ['collection', 'Colección'], ['inventory', 'Inventario'], ['workshop', 'Taller'],
+    ['garage', 'Garaje'], ['jobs', 'Trabajos'], ['collection', 'Colección'], ['inventory', 'Inventario'], ['workshop', 'Taller'],
   ];
   return (
     <>
@@ -19,6 +21,12 @@ export function Hud({ panel, onPanel }: { panel: PanelId; onPanel: (p: PanelId) 
           <small>{s.xp - lo}/{hi - lo} XP</small>
         </div>
       </div>
+      {focusedJob && (
+        <div className="job-banner">
+          <span>Trabajando en el auto de {focusedJob.clientName}</span>
+          <button className="btn small" onClick={() => actions.focusJob(null)}>Volver a mi auto</button>
+        </div>
+      )}
       <div className="zoom">
         <button className="btn" onClick={() => bus.emit('zoom-in')} aria-label="Acercar">+</button>
         <button className="btn" onClick={() => bus.emit('zoom-out')} aria-label="Alejar">−</button>

@@ -5,11 +5,12 @@ import { Hud } from './Hud';
 import { CollectionScreen } from './screens/CollectionScreen';
 import { CustomizeScreen } from './screens/CustomizeScreen';
 import { InventoryScreen } from './screens/InventoryScreen';
+import { JobsScreen } from './screens/JobsScreen';
 import { WorkshopScreen } from './screens/WorkshopScreen';
 
-export type PanelId = 'garage' | 'collection' | 'inventory' | 'workshop' | null;
+export type PanelId = 'garage' | 'collection' | 'inventory' | 'workshop' | 'jobs' | null;
 const TITLES: Record<Exclude<PanelId, null>, string> = {
-  garage: 'Personalización', collection: 'Colección', inventory: 'Inventario', workshop: 'Mejoras del taller',
+  garage: 'Personalización', collection: 'Colección', inventory: 'Inventario', workshop: 'Mejoras del taller', jobs: 'Clientes y trabajos',
 };
 
 function GameCanvas() {
@@ -49,6 +50,7 @@ export default function App() {
             {panel === 'collection' && <CollectionScreen />}
             {panel === 'inventory' && <InventoryScreen />}
             {panel === 'workshop' && <WorkshopScreen />}
+            {panel === 'jobs' && <JobsScreen />}
           </div>
         </aside>
       )}
