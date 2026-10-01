@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { floorTier, garageCapacity, getDisplayVehicle, getPreview, getState, lightingTier, liftCount, subscribe } from '../core/store';
+import { actions, floorTier, garageCapacity, getDisplayVehicle, getPreview, getState, lightingTier, liftCount, subscribe } from '../core/store';
 import type { CarBuild } from '../core/types';
 import { resolvePaintColor } from '../data/parts';
 import { vehicleById } from '../data/vehicles';
@@ -27,6 +27,7 @@ export class GarageScene extends Phaser.Scene {
   constructor() { super('garage'); }
 
   create() {
+    actions.goToScene('garage');
     const cam = this.cameras.main;
     cam.setBackgroundColor(0x11141c);
     drawShell(this.add.graphics());
@@ -78,11 +79,12 @@ export class GarageScene extends Phaser.Scene {
     });
 
     const zoomIn = () => this.setZoom(cam.zoom * 1.2), zoomOut = () => this.setZoom(cam.zoom / 1.2), re = () => this.recenter();
-    bus.on('zoom-in', zoomIn); bus.on('zoom-out', zoomOut); bus.on('recenter', re);
+    const gotoCity = () => this.scene.start('city');
+    bus.on('zoom-in', zoomIn); bus.on('zoom-out', zoomOut); bus.on('recenter', re); bus.on('goto-city', gotoCity);
 
     const unsub = subscribe(() => this.sync());
     this.sync();
-    this.events.once('shutdown', () => { unsub(); bus.off('zoom-in', zoomIn); bus.off('zoom-out', zoomOut); bus.off('recenter', re); });
+    this.events.once('shutdown', () => { unsub(); bus.off('zoom-in', zoomIn); bus.off('zoom-out', zoomOut); bus.off('recenter', re); bus.off('goto-city', gotoCity); });
   }
 
   update(_t: number, dt: number) {

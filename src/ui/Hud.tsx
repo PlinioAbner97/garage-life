@@ -1,16 +1,20 @@
 import { fmtMoney, levelFromXp, xpForLevel } from '../core/economy';
-import { actions, useFocusedJobId, useGame } from '../core/store';
+import { actions, useCurrentScene, useFocusedJobId, useGame } from '../core/store';
 import { bus } from '../game/bus';
 import type { PanelId } from './App';
 
 export function Hud({ panel, onPanel }: { panel: PanelId; onPanel: (p: PanelId) => void }) {
   const s = useGame();
   const focusedId = useFocusedJobId();
+  const scene = useCurrentScene();
   const focusedJob = s.activeJobs.find((j) => j.id === focusedId);
   const lv = levelFromXp(s.xp), lo = xpForLevel(lv), hi = xpForLevel(lv + 1);
-  const nav: [Exclude<PanelId, null>, string][] = [
-    ['garage', 'Garaje'], ['jobs', 'Trabajos'], ['collection', 'Colección'], ['inventory', 'Inventario'], ['workshop', 'Taller'],
+  const nav: [string, string][] = [
+    ['garage', 'Garaje'], ['jobs', 'Trabajos'], ['collection', 'Colección'], ['inventory', 'Inventario'],
+    ['workshop', 'Mejoras'], ['profile', 'Perfil'],
   ];
+  const goMap = () => { onPanel(null); bus.emit(scene === 'garage' ? 'goto-city' : 'goto-garage'); };
+
   return (
     <>
       <div className="hud-top">
@@ -20,6 +24,7 @@ export function Hud({ panel, onPanel }: { panel: PanelId; onPanel: (p: PanelId) 
           <div className="bar"><i style={{ width: `${((s.xp - lo) / (hi - lo)) * 100}%` }} /></div>
           <small>{s.xp - lo}/{hi - lo} XP</small>
         </div>
+        <button className="btn chip-btn" onClick={goMap}>{scene === 'garage' ? '🏙️ Ir a la ciudad' : '🔧 Volver al taller'}</button>
       </div>
       {focusedJob && (
         <div className="job-banner">

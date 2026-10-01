@@ -29,3 +29,12 @@ export function modLevel(build: CarBuild): { count: number; total: number } {
   if (build.paint !== 'paint-red' && build.paint !== 'paint-white') count++;
   return { count, total: entries.length + 1 };
 }
+
+// Puntaje real para los encuentros automotrices: combina el valor de mercado del auto,
+// sus estadísticas y su nivel de modificación real (no una recompensa fija/decorativa).
+export function exhibitionScore(model: VehicleModel, build: CarBuild): number {
+  const stats = carStats(model, build);
+  const value = carValue(model, build);
+  const mods = modLevel(build);
+  return Math.round(value + stats.power * 2 + stats.handling * 2 + mods.count * 50);
+}

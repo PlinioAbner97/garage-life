@@ -9,12 +9,17 @@ export const DAILY_MISSIONS: MissionDef[] = [
   { id: 'd-money', scope: 'daily', type: 'money_earned', target: 400, reward: { money: 100, xp: 15, reputation: 5 }, description: 'Gana $400 trabajando' },
   { id: 'd-client', scope: 'daily', type: 'clients_served', target: 1, reward: { money: 80, xp: 10, reputation: 4 }, description: 'Atiende a un cliente' },
   { id: 'd-job', scope: 'daily', type: 'jobs_completed', target: 1, reward: { money: 90, xp: 12, reputation: 4 }, description: 'Mejora (entrega) un vehículo' },
+  { id: 'd-parts-city', scope: 'daily', type: 'parts_bought', target: 1, reward: { money: 70, xp: 10, reputation: 3 }, description: 'Compra una pieza en la ciudad' },
+  { id: 'd-event', scope: 'daily', type: 'events_attended', target: 1, reward: { money: 120, xp: 18, reputation: 6 }, description: 'Presenta un auto en un encuentro' },
 ];
 export const WEEKLY_MISSIONS: MissionDef[] = [
   { id: 'w-jobs', scope: 'weekly', type: 'jobs_completed', target: 8, reward: { money: 900, xp: 100, reputation: 30 }, description: 'Completa 8 trabajos' },
   { id: 'w-special', scope: 'weekly', type: 'special_clients_served', target: 1, reward: { money: 700, xp: 80, reputation: 40 }, description: 'Atiende a un cliente especial' },
   { id: 'w-restore', scope: 'weekly', type: 'restorations_completed', target: 1, reward: { money: 600, xp: 70, reputation: 25 }, description: 'Completa una restauración' },
   { id: 'w-money', scope: 'weekly', type: 'money_earned', target: 2000, reward: { money: 500, xp: 60, reputation: 20 }, description: 'Gana $2000 trabajando' },
+  { id: 'w-vehicle', scope: 'weekly', type: 'vehicles_bought', target: 1, reward: { money: 400, xp: 50, reputation: 15 }, description: 'Compra un vehículo (concesionario o usado)' },
+  { id: 'w-explore', scope: 'weekly', type: 'zones_visited', target: 2, reward: { money: 300, xp: 40, reputation: 15 }, description: 'Explora 2 zonas nuevas de la ciudad' },
+  { id: 'w-race-reg', scope: 'weekly', type: 'race_registrations', target: 1, reward: { money: 250, xp: 30, reputation: 10 }, description: 'Inscríbete en un evento del distrito de carreras' },
 ];
 export const ALL_MISSIONS = [...DAILY_MISSIONS, ...WEEKLY_MISSIONS];
 export const missionById = (id: string) => ALL_MISSIONS.find((m) => m.id === id);

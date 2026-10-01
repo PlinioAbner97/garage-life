@@ -18,6 +18,7 @@ background:repeating-linear-gradient(135deg,#141824 0 24px,#11141c 24px 48px)}
 .start h1 span{color:var(--accent);margin-left:.15em}.start p{margin:0;color:var(--mute);max-width:32ch}
 .hud-top{position:fixed;top:calc(var(--sat) + 10px);left:10px;display:flex;gap:8px;pointer-events:none}
 .chip{background:rgba(26,31,43,.92);border:1px solid var(--line);border-radius:12px;padding:8px 14px}
+.chip-btn{background:rgba(26,31,43,.92);pointer-events:auto}
 .money{font-weight:800;color:var(--accent);font-size:1.15rem;display:flex;align-items:center}
 .level{display:flex;flex-direction:column;gap:4px;min-width:130px}.level small{color:var(--mute)}
 .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;background:var(--cyan)}
@@ -34,6 +35,13 @@ left:0;right:0;bottom:0;max-height:58vh;border-radius:18px 18px 0 0;padding-bott
 h3{margin:0 0 6px}h4{margin:16px 0 8px;color:var(--mute);font-weight:600}
 .hint{color:var(--mute);margin:12px 0;min-height:1.2em}
 .swatches{display:flex;flex-wrap:wrap;gap:10px}
+.swatches.wrap{gap:8px}
+.swatches.wrap .btn{padding:0 10px;min-height:36px;font-size:.85rem}
+.badge{font-size:.72rem;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--mute)}
+.badge.cond-excellent{color:#7ed957;border-color:#7ed957}
+.badge.cond-good{color:#4dd0ff;border-color:#4dd0ff}
+.badge.cond-fair{color:#ffc300;border-color:#ffc300}
+.badge.cond-needs_repair{color:#ff7f11;border-color:#ff7f11}
 .sw{width:44px;height:44px;border-radius:50%;border:3px solid var(--line);cursor:pointer;padding:0}
 .sw.on{border-color:var(--cyan)}.sw.static{width:28px;height:28px;cursor:default;flex:none}
 .tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}

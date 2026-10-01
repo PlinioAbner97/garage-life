@@ -32,7 +32,12 @@ export interface CompletedJob {
 }
 export type CounterType =
   | 'repairs_completed' | 'mods_installed' | 'money_earned' | 'clients_served'
-  | 'jobs_completed' | 'special_clients_served' | 'restorations_completed';
+  | 'jobs_completed' | 'special_clients_served' | 'restorations_completed'
+  | 'zones_visited' | 'zones_unlocked' | 'vehicles_bought' | 'parts_bought'
+  | 'events_attended' | 'race_registrations';
+
+export interface UsedListing { id: string; weekKey: string; modelId: string; condition: string; price: number }
+export interface RaceRegistration { id: string; eventId: string; carUid: string; registeredAt: number }
 
 export interface GameState {
   version: number;
@@ -45,4 +50,9 @@ export interface GameState {
   dailyCounters: Record<CounterType, number>;
   weeklyCounters: Record<CounterType, number>;
   dailyClaimed: string[]; weeklyClaimed: string[];
+  // --- Ciudad ---
+  unlockedZoneIds: string[]; visitedZoneIds: string[];
+  usedMarketWeekKey: string; usedMarketListings: UsedListing[]; usedMarketPurchasedIds: string[];
+  raceRegistrations: RaceRegistration[];
+  meetupLastAttended: Record<string, string>; // eventId -> dailyKey de la última vez que se presentó un auto
 }

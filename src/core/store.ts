@@ -2,18 +2,22 @@ import { useSyncExternalStore } from 'react';
 import { xpForPurchase, WORK_REWARD } from './economy';
 import { todayKey, weekKey } from './dates';
 import { generateOffer, jobSatisfaction as jobSatisfactionCalc, jobProgress as jobProgressCalc, offerToActiveJob, finalizeJob } from './jobs';
+import { exhibitionScore } from './stats';
 import { localSave, type SaveRepository } from './save';
-import type { ActiveJob, CarBuild, CounterType, GameState, JobTask, TaskQuality } from './types';
+import type { ActiveJob, CarBuild, CounterType, GameState, JobTask, RaceRegistration, TaskQuality } from './types';
 import { UPGRADES, upgradeById, type UpgradeCategory } from '../data/upgrades';
 import { STOCK_PART_IDS, partById, type PartCategory } from '../data/parts';
 import { taskById } from '../data/taskCatalog';
 import { DAILY_MISSIONS, WEEKLY_MISSIONS, missionById } from '../data/missions';
 import { VEHICLES, vehicleById } from '../data/vehicles';
+import { zoneById } from '../data/zones';
+import { generateUsedListings } from '../data/usedMarket';
+import { raceById, meetupById } from '../data/racing';
 
 export { jobProgressCalc as jobProgress, jobSatisfactionCalc as jobSatisfaction };
 
 export const repository: SaveRepository = localSave; // cambiar aquí por Supabase en el futuro
-const SAVE_VERSION = 3;
+const SAVE_VERSION = 4;
 const MAX_OFFERS = 3;
 
 const stockBuild = (): CarBuild => ({
@@ -26,18 +30,26 @@ const stockBuild = (): CarBuild => ({
 const zeroCounters = (): Record<CounterType, number> => ({
   repairs_completed: 0, mods_installed: 0, money_earned: 0, clients_served: 0,
   jobs_completed: 0, special_clients_served: 0, restorations_completed: 0,
+  zones_visited: 0, zones_unlocked: 0, vehicles_bought: 0, parts_bought: 0,
+  events_attended: 0, race_registrations: 0,
 });
 
-const defaults = (): GameState => ({
-  version: SAVE_VERSION, money: 1500, xp: 0, reputation: 0, selectedUid: 'car-1',
-  cars: [{ uid: 'car-1', modelId: VEHICLES[0].id, build: stockBuild() }],
-  ownedPartIds: [...STOCK_PART_IDS],
-  ownedUpgradeIds: [],
-  offers: [], activeJobs: [], jobHistory: [],
-  dailyKey: todayKey(), weeklyKey: weekKey(),
-  dailyCounters: zeroCounters(), weeklyCounters: zeroCounters(),
-  dailyClaimed: [], weeklyClaimed: [],
-});
+const defaults = (): GameState => {
+  const wk = weekKey();
+  return {
+    version: SAVE_VERSION, money: 1500, xp: 0, reputation: 0, selectedUid: 'car-1',
+    cars: [{ uid: 'car-1', modelId: VEHICLES[0].id, build: stockBuild() }],
+    ownedPartIds: [...STOCK_PART_IDS],
+    ownedUpgradeIds: [],
+    offers: [], activeJobs: [], jobHistory: [],
+    dailyKey: todayKey(), weeklyKey: wk,
+    dailyCounters: zeroCounters(), weeklyCounters: zeroCounters(),
+    dailyClaimed: [], weeklyClaimed: [],
+    unlockedZoneIds: [], visitedZoneIds: [],
+    usedMarketWeekKey: wk, usedMarketListings: generateUsedListings(wk), usedMarketPurchasedIds: [],
+    raceRegistrations: [], meetupLastAttended: {},
+  };
+};
 
 // Migración: conserva todo lo reconocible de un guardado anterior (v2 con talleres/vehículos/piezas)
 // y solo completa con valores por defecto los campos nuevos de clientes/misiones.
@@ -67,35 +79,53 @@ function migrate(raw: unknown): GameState {
     jobHistory: Array.isArray(r.jobHistory) ? r.jobHistory : d.jobHistory,
     dailyKey: typeof r.dailyKey === 'string' ? r.dailyKey : d.dailyKey,
     weeklyKey: typeof r.weeklyKey === 'string' ? r.weeklyKey : d.weeklyKey,
-    dailyCounters: r.dailyCounters ?? d.dailyCounters,
-    weeklyCounters: r.weeklyCounters ?? d.weeklyCounters,
+    dailyCounters: { ...d.dailyCounters, ...(r.dailyCounters ?? {}) },
+    weeklyCounters: { ...d.weeklyCounters, ...(r.weeklyCounters ?? {}) },
     dailyClaimed: Array.isArray(r.dailyClaimed) ? r.dailyClaimed : d.dailyClaimed,
     weeklyClaimed: Array.isArray(r.weeklyClaimed) ? r.weeklyClaimed : d.weeklyClaimed,
+    unlockedZoneIds: Array.isArray(r.unlockedZoneIds) ? r.unlockedZoneIds : d.unlockedZoneIds,
+    visitedZoneIds: Array.isArray(r.visitedZoneIds) ? r.visitedZoneIds : d.visitedZoneIds,
+    usedMarketWeekKey: typeof r.usedMarketWeekKey === 'string' ? r.usedMarketWeekKey : d.usedMarketWeekKey,
+    usedMarketListings: Array.isArray(r.usedMarketListings) ? r.usedMarketListings : d.usedMarketListings,
+    usedMarketPurchasedIds: Array.isArray(r.usedMarketPurchasedIds) ? r.usedMarketPurchasedIds : d.usedMarketPurchasedIds,
+    raceRegistrations: Array.isArray(r.raceRegistrations) ? r.raceRegistrations : d.raceRegistrations,
+    meetupLastAttended: r.meetupLastAttended ?? d.meetupLastAttended,
   };
 }
 
 let state: GameState = defaults();
 let preview: { uid: string; category: PartCategory; value: string } | null = null;
 let focusedJobId: string | null = null;
+let currentScene: 'garage' | 'city' = 'garage';
 const listeners = new Set<() => void>();
 
 export const getState = () => state;
 export const getPreview = () => preview;
 export const getFocusedJobId = () => focusedJobId;
+export const getCurrentScene = () => currentScene;
 export const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; };
 export const useGame = () => useSyncExternalStore(subscribe, getState);
 export const usePreview = () => useSyncExternalStore(subscribe, getPreview);
 export const useFocusedJobId = () => useSyncExternalStore(subscribe, getFocusedJobId);
+export const useCurrentScene = () => useSyncExternalStore(subscribe, getCurrentScene);
 
 function emit() { listeners.forEach((l) => l()); }
 function set(p: Partial<GameState>) { state = { ...state, ...p }; emit(); void repository.save(state); }
 
-// Reinicia contadores/reclamos diarios y semanales si cambió la fecha real del dispositivo.
+// Reinicia contadores/reclamos diarios y semanales, y rota el mercado usado,
+// si cambió la fecha real del dispositivo (no la sesión del navegador).
 function ensurePeriods() {
   const td = todayKey(), wk = weekKey();
   const patch: Partial<GameState> = {};
   if (state.dailyKey !== td) { patch.dailyKey = td; patch.dailyCounters = zeroCounters(); patch.dailyClaimed = []; }
-  if (state.weeklyKey !== wk) { patch.weeklyKey = wk; patch.weeklyCounters = zeroCounters(); patch.weeklyClaimed = []; }
+  if (state.weeklyKey !== wk) {
+    patch.weeklyKey = wk; patch.weeklyCounters = zeroCounters(); patch.weeklyClaimed = [];
+  }
+  if (state.usedMarketWeekKey !== wk) {
+    patch.usedMarketWeekKey = wk;
+    patch.usedMarketListings = generateUsedListings(wk);
+    patch.usedMarketPurchasedIds = []; // los autos ya comprados quedan en la colección del jugador, no aquí
+  }
   if (Object.keys(patch).length) set(patch);
 }
 
@@ -165,8 +195,20 @@ export const actions = {
     if (state.money < part.price) return 'Dinero insuficiente';
     preview = null;
     const money = state.money - part.price, xp = state.xp + xpForPurchase(part.price);
-    set({ money, xp, ownedPartIds: [...state.ownedPartIds, id], cars: patchCar(state.selectedUid, { [part.category]: id } as Partial<CarBuild>) });
+    set({ money, xp, ownedPartIds: [...state.ownedPartIds, id], cars: patchCar(state.selectedUid, { [part.category]: id } as Partial<CarBuild>), ...bumpCounters({ parts_bought: 1 }) });
     return `Compraste e instalaste ${part.name}`;
+  },
+  // Comprar una pieza SIN equiparla automáticamente (tienda de piezas de la ciudad):
+  // queda disponible en el inventario para equiparla luego desde cualquier auto.
+  buyPartToInventory: (id: string): string => {
+    const part = partById(id);
+    if (!part) return 'Pieza no encontrada';
+    if (state.ownedPartIds.includes(id)) return 'Ya tienes esta pieza';
+    if (level() < part.unlockLevel) return `Requiere nivel ${part.unlockLevel}`;
+    if (state.money < part.price) return 'Dinero insuficiente';
+    const money = state.money - part.price, xp = state.xp + xpForPurchase(part.price);
+    set({ money, xp, ownedPartIds: [...state.ownedPartIds, id], ...bumpCounters({ parts_bought: 1 }) });
+    return `${part.name} añadida a tu inventario`;
   },
   buyVehicle: (modelId: string): string => {
     const m = vehicleById(modelId);
@@ -176,7 +218,7 @@ export const actions = {
     if (state.money < m.price) return 'Dinero insuficiente';
     const uid = 'car-' + Date.now().toString(36);
     const money = state.money - m.price, xp = state.xp + xpForPurchase(m.price);
-    set({ money, xp, cars: [...state.cars, { uid, modelId, build: stockBuild() }], selectedUid: uid });
+    set({ money, xp, cars: [...state.cars, { uid, modelId, build: stockBuild() }], selectedUid: uid, ...bumpCounters({ vehicles_bought: 1 }) });
     return `${m.brand} ${m.name} se unió a tu colección`;
   },
   buyUpgrade: (id: string): string => {
@@ -307,6 +349,85 @@ export const actions = {
     else patch.weeklyClaimed = [...state.weeklyClaimed, id];
     set(patch);
     return `Recompensa reclamada: +$${def.reward.money}, +${def.reward.xp} XP, +${def.reward.reputation} reputación`;
+  },
+
+  // --- Ciudad: navegación, zonas, mercado usado, carreras y encuentros ---
+  goToScene: (scene: 'garage' | 'city') => { currentScene = scene; emit(); },
+  visitZone: (zoneId: string) => {
+    if (state.visitedZoneIds.includes(zoneId)) return;
+    set({ visitedZoneIds: [...state.visitedZoneIds, zoneId], ...bumpCounters({ zones_visited: 1 }) });
+  },
+  unlockZone: (zoneId: string): string => {
+    const zone = zoneById(zoneId);
+    if (!zone) return 'Zona no encontrada';
+    if (state.unlockedZoneIds.includes(zoneId)) return 'Esta zona ya está desbloqueada';
+    const req = zone.unlock;
+    if (req.level && level() < req.level) return `Requiere nivel ${req.level}`;
+    if (req.reputation && state.reputation < req.reputation) return `Requiere ${req.reputation} de reputación`;
+    if (req.money && state.money < req.money) return `Requiere ${req.money} para la apertura`;
+    const patch: Partial<GameState> = { unlockedZoneIds: [...state.unlockedZoneIds, zoneId] };
+    if (req.money) patch.money = state.money - req.money;
+    set({ ...patch, ...bumpCounters({ zones_unlocked: 1 }) });
+    return `${zone.name} desbloqueada`;
+  },
+  isZoneUnlocked: (zoneId: string): boolean => {
+    const zone = zoneById(zoneId);
+    if (!zone) return false;
+    const req = zone.unlock;
+    if (!req.level && !req.reputation && !req.money) return true;
+    return state.unlockedZoneIds.includes(zoneId);
+  },
+
+  buyUsedListing: (listingId: string): string => {
+    const listing = state.usedMarketListings.find((l) => l.id === listingId);
+    if (!listing) return 'Este vehículo ya no está disponible (el mercado rotó)';
+    if (state.usedMarketPurchasedIds.includes(listingId)) return 'Ya compraste este vehículo';
+    const m = vehicleById(listing.modelId);
+    if (state.cars.some((c) => c.modelId === listing.modelId)) return 'Ya tienes este modelo en tu colección';
+    if (state.cars.length >= garageCapacity()) return 'Necesitas más espacio en el taller';
+    if (state.money < listing.price) return 'Dinero insuficiente';
+    const uid = 'car-' + Date.now().toString(36);
+    const money = state.money - listing.price, xp = state.xp + xpForPurchase(listing.price);
+    set({
+      money, xp, cars: [...state.cars, { uid, modelId: listing.modelId, build: stockBuild() }], selectedUid: uid,
+      usedMarketPurchasedIds: [...state.usedMarketPurchasedIds, listingId],
+      ...bumpCounters({ vehicles_bought: 1 }),
+    });
+    return `Compraste ${m.brand} ${m.name} usado por ${listing.price}`;
+  },
+
+  registerRace: (eventId: string, carUid: string): string => {
+    const ev = raceById(eventId);
+    if (!ev) return 'Evento no encontrado';
+    if (level() < ev.unlockLevel) return `Requiere nivel ${ev.unlockLevel}`;
+    if (!state.cars.some((c) => c.uid === carUid)) return 'Vehículo no encontrado en tu colección';
+    if (state.raceRegistrations.some((r) => r.eventId === eventId && r.carUid === carUid)) return 'Ya estás inscrito con este vehículo';
+    if (state.money < ev.entryFee) return 'Dinero insuficiente para la inscripción';
+    const reg: RaceRegistration = { id: 'reg-' + Date.now().toString(36), eventId, carUid, registeredAt: Date.now() };
+    set({ money: state.money - ev.entryFee, raceRegistrations: [...state.raceRegistrations, reg], ...bumpCounters({ race_registrations: 1 }) });
+    return `Inscrito en ${ev.name}. La mecánica de carrera llegará en una próxima actualización.`;
+  },
+  cancelRaceRegistration: (regId: string) => set({ raceRegistrations: state.raceRegistrations.filter((r) => r.id !== regId) }),
+
+  attendMeetup: (eventId: string, carUid: string): string => {
+    ensurePeriods();
+    const ev = meetupById(eventId);
+    if (!ev) return 'Evento no encontrado';
+    if (state.meetupLastAttended[eventId] === state.dailyKey) return 'Ya presentaste un auto aquí hoy, vuelve mañana';
+    const car = state.cars.find((c) => c.uid === carUid);
+    if (!car) return 'Vehículo no encontrado en tu colección';
+    const model = vehicleById(car.modelId);
+    const score = exhibitionScore(model, car.build);
+    const tier = score >= ev.thresholds.gold ? 'gold' : score >= ev.thresholds.silver ? 'silver' : score >= ev.thresholds.bronze ? 'bronze' : null;
+    if (!tier) return `Puntaje ${score}: no alcanza el mínimo (${ev.thresholds.bronze}) para este encuentro`;
+    const reward = ev.rewards[tier];
+    set({
+      money: state.money + reward.money, xp: state.xp + reward.xp, reputation: state.reputation + reward.reputation,
+      meetupLastAttended: { ...state.meetupLastAttended, [eventId]: state.dailyKey },
+      ...bumpCounters({ events_attended: 1 }),
+    });
+    const tierLabel = tier === 'gold' ? 'Oro' : tier === 'silver' ? 'Plata' : 'Bronce';
+    return `${tierLabel} (puntaje ${score}): +$${reward.money}, +${reward.xp} XP, +${reward.reputation} reputación`;
   },
 };
 
