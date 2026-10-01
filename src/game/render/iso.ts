@@ -16,3 +16,15 @@ export function box(g: G, x: number, y: number, z: number, dx: number, dy: numbe
   poly(g, [[x, y + dy, z], [x + dx, y + dy, z], [x + dx, y + dy, z + dz], [x, y + dy, z + dz]], l);
   poly(g, [[x, y, z + dz], [x + dx, y, z + dz], [x + dx, y + dy, z + dz], [x, y + dy, z + dz]], color);
 }
+// Sombra de contacto suave (dos elipses superpuestas) para dar sensación de profundidad
+// bajo objetos — reemplaza las sombras planas/ausentes sin cambiar la arquitectura de dibujo.
+export function shadowBlob(g: G, cx: number, cy: number, rx: number, ry: number, strength = 0.32) {
+  g.fillStyle(0x000000, strength * 0.4); g.fillEllipse(cx, cy, rx * 1.6, ry * 1.6);
+  g.fillStyle(0x000000, strength); g.fillEllipse(cx, cy, rx, ry);
+}
+// Contorno sutil para dar silueta/definición a una figura (evita el aspecto "plano").
+export function outline(g: G, pts: P3[], color: number, alpha = 0.35, width = 1.5) {
+  g.lineStyle(width, color, alpha);
+  const p = pts.map((pt) => iso(...pt));
+  g.strokePoints(p, true, true);
+}
