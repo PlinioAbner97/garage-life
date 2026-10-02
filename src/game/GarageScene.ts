@@ -4,6 +4,7 @@ import type { CarBuild } from '../core/types';
 import { resolvePaintColor } from '../data/parts';
 import { vehicleById } from '../data/vehicles';
 import { bus } from './bus';
+import { fadeIn, pulse, sparkle } from './fx';
 import { drawCar } from './render/car';
 import {
   ACTIVE_ANCHOR, BARREL, STORAGE_SLOTS, TIRE_RACK, TOOL_CABINET,
@@ -20,6 +21,7 @@ export class GarageScene extends Phaser.Scene {
   private lightGfx!: Phaser.GameObjects.Graphics;
   private storageGfx!: Phaser.GameObjects.Graphics;
   private carKey = '';
+  private firstCarSync = true;
   private sig = '';
   private lastPinch = 0;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -30,11 +32,13 @@ export class GarageScene extends Phaser.Scene {
     actions.goToScene('garage');
     const cam = this.cameras.main;
     cam.setBackgroundColor(0x11141c);
+    fadeIn(this);
     drawShell(this.add.graphics());
     this.floorGfx = this.add.graphics();
     this.liftsGfx = this.add.graphics();
     drawDecor(this.add.graphics());
     this.lightGfx = this.add.graphics();
+    pulse(this, this.lightGfx, 0.85, 1, 2200);
     this.storageGfx = this.add.graphics();
     void BARREL; void TIRE_RACK;
 
@@ -110,6 +114,8 @@ export class GarageScene extends Phaser.Scene {
       this.carGfx.setScale(build.facing, 1);
       const centerLocal = iso(m.length / 2, m.width / 2, 0);
       this.carZone.setPosition(this.carAnchor.x + centerLocal.x, this.carAnchor.y + centerLocal.y - 20);
+      if (!this.firstCarSync) sparkle(this, this.carAnchor.x + centerLocal.x, this.carAnchor.y + centerLocal.y - 30);
+      this.firstCarSync = false;
       this.carKey = carKey;
     }
 

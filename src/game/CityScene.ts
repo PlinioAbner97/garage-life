@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { actions, getState, subscribe } from '../core/store';
 import { ZONES } from '../data/zones';
 import { bus } from './bus';
+import { fadeIn } from './fx';
 import { GARAGE_RETURN, drawDecor, drawGarageReturn, drawStreets, drawZoneBuilding } from './render/city';
 import { iso } from './render/iso';
 
@@ -18,6 +19,7 @@ export class CityScene extends Phaser.Scene {
     actions.goToScene('city');
     const cam = this.cameras.main;
     cam.setBackgroundColor(0x181c26);
+    fadeIn(this, 0x181c26);
     drawStreets(this.add.graphics());
     drawDecor(this.add.graphics());
     drawGarageReturn(this.add.graphics());
