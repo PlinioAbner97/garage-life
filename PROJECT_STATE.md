@@ -13,6 +13,9 @@ Phaser 3 (juego) + React/TypeScript (UI) + Vite. Guardado: localStorage vía `co
 - `game/GarageScene.ts` + `game/CityScene.ts` — dos escenas Phaser, cambian con `this.scene.start()`, comunicadas por `game/bus.ts` (EventEmitter). `render/*.ts` = primitivos isométricos reutilizables (`iso.ts`: box/poly/iso/shade).
 - `ui/App.tsx` — enrutador de paneles (overlay tipo sheet sobre el canvas Phaser). `ui/screens/*` = una pantalla por feature.
 
+## Visual overhaul (5 fases, completo)
+`iso.ts` (+shadowBlob/outline) → `garage.ts`, `car.ts` (cabina ahusada/parachoques/espejos), `styles.css` (solo CSS, botones con relieve/dock/paneles), `fx.ts` (pulso/destello/fade, respeta reduced-motion), `city.ts`. Mismo motor vectorial (box/poly/iso), sin nueva tecnología de sprites.
+
 ## Implementado (4 actualizaciones)
 1. Taller base: vehículos, personalización (pintura/aros/suspensión/bodykit/vinilos/motor), inventario, mejoras del taller, economía.
 2. Clientes y trabajos: ofertas, tareas con timer real + minijuego opcional, reputación, misiones diarias/semanales.
