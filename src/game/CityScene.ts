@@ -17,6 +17,7 @@ export class CityScene extends Phaser.Scene {
 
   create() {
     actions.goToScene('city');
+    this.lockSig = ''; // mismo motivo que en GarageScene: la instancia de escena se reutiliza
     const cam = this.cameras.main;
     cam.setBackgroundColor(0x181c26);
     fadeIn(this, 0x181c26);

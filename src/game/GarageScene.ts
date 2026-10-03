@@ -30,6 +30,12 @@ export class GarageScene extends Phaser.Scene {
 
   create() {
     actions.goToScene('garage');
+    // Phaser reutiliza esta misma instancia de escena al volver del mapa de la ciudad;
+    // sin este reset, sync() cree que nada cambió y no vuelve a dibujar sobre los
+    // Graphics nuevos (vacíos) que create() acaba de crear.
+    this.carKey = '';
+    this.sig = '';
+    this.firstCarSync = true;
     const cam = this.cameras.main;
     cam.setBackgroundColor(0x11141c);
     fadeIn(this);
