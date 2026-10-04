@@ -6,7 +6,8 @@ import { box, iso, outline, poly, shade, shadowBlob } from './iso';
 
 // Arte vectorial propio del auto, por capas según las piezas equipadas (carrocería, cabina
 // ahusada con parabrisas/techo/ventanas independientes, parachoques, espejos, luces, body kit).
-// Fase 2: más silueta, profundidad y brillo — misma arquitectura (box/poly), mismo `build`.
+// Fase JDM: silueta por segmentos (capó/maletero escalonados + parachoques propios + guardabarros
+// ensanchados) en vez de una caja única, para dejar de verse "cuadrado" — misma arquitectura (box/poly).
 const RIM_SIZE: Record<string, [number, number]> = { street: [26, 30], sport: [30, 34], wide: [35, 40] };
 const SUSPENSION_DROP: Record<string, number> = { 'susp-street': 0, 'susp-sport': 0.06, 'susp-race': 0.11 };
 
@@ -22,23 +23,63 @@ export function drawCar(g: Phaser.GameObjects.Graphics, m: VehicleModel, build: 
   const topZ = bodyZ + m.bodyH;
 
   const shadowC = iso(L / 2, W / 2, 0);
-  shadowBlob(g, shadowC.x, shadowC.y + 4, (L + W) * 17, (L + W) * 8, 0.4);
+  shadowBlob(g, shadowC.x, shadowC.y + 4, (L + W) * 17, (L + W) * 8, 0.42);
 
+  // llanta con disco de freno, 5 rayos y pinza de freno asomando — look más "real" que 3 líneas
   const wheel = (x: number, y: number) => {
     const p = iso(x, y, Math.max(0.12, 0.3 - drop));
-    g.fillStyle(0x111111, 1).fillEllipse(p.x, p.y, rw, rh);
-    g.fillStyle(rimColor, 1).fillEllipse(p.x, p.y, rw * 0.56, rh * 0.56);
-    g.lineStyle(1.5, shade(rimColor, 0.6), 0.8);
-    for (let k = 0; k < 3; k++) { const a = (k / 3) * Math.PI; g.lineBetween(p.x - Math.cos(a) * rw * 0.5, p.y - Math.sin(a) * rh * 0.5, p.x + Math.cos(a) * rw * 0.5, p.y + Math.sin(a) * rh * 0.5); }
-    g.fillStyle(0x111111, 1).fillCircle(p.x, p.y, 3);
+    g.fillStyle(0x0a0a0a, 1).fillEllipse(p.x, p.y, rw, rh); // neumático
+    g.fillStyle(0x222225, 1).fillEllipse(p.x, p.y, rw * 0.78, rh * 0.78); // pared lateral
+    g.fillStyle(0xd94040, 1).fillCircle(p.x, p.y, rh * 0.24); // pinza de freno
+    g.fillStyle(rimColor, 1).fillEllipse(p.x, p.y, rw * 0.58, rh * 0.58); // aro
+    g.lineStyle(1.4, shade(rimColor, 0.55), 0.85);
+    for (let k = 0; k < 5; k++) {
+      const a = (k / 5) * Math.PI * 2;
+      g.lineBetween(p.x, p.y, p.x + Math.cos(a) * rw * 0.5, p.y + Math.sin(a) * rh * 0.5);
+    }
+    g.lineStyle(1, shade(rimColor, 1.25), 0.6).strokeEllipse(p.x, p.y, rw * 0.58, rh * 0.58);
+    g.fillStyle(0x111111, 1).fillCircle(p.x, p.y, 2.6);
   };
-  wheel(L * 0.2, 0); wheel(L * 0.82, 0);
 
-  // carrocería principal + parachoques base (siempre presentes, no solo con body kit)
-  box(g, 0, 0, bodyZ, L, W, m.bodyH, paint);
-  box(g, -0.04, 0.05, bodyZ, 0.05, W - 0.1, m.bodyH * 0.3, 0x1c1c1c);
-  box(g, L - 0.01, 0.05, bodyZ, 0.05, W - 0.1, m.bodyH * 0.3, 0x1c1c1c);
-  outline(g, [[0, 0, topZ], [L, 0, topZ], [L, W, topZ], [0, W, topZ]], 0x000000, 0.25, 1);
+  // --- silueta por segmentos: maletero / zócalo medio / cabina / capó, cada extremo con su
+  // propio parachoques más bajo y de otro tono — rompe la caja única y sugiere curvatura.
+  const noseLen = Math.min(L * 0.13, 0.32);
+  const tailLen = Math.min(L * 0.11, 0.28);
+  const cabinBack = m.cabinStart;
+  const cabinFront = m.cabinStart + m.cabinLen;
+  const hoodEnd = L - noseLen;
+  const trunkStart = tailLen;
+  const deckH = m.bodyH * 0.84;
+  const bumpH = m.bodyH * 0.56;
+  const bumperColor = shade(paint, 0.4);
+
+  // zócalo/guardabarros bajo toda la cabina (altura completa)
+  box(g, cabinBack, 0, bodyZ, cabinFront - cabinBack, W, m.bodyH, paint);
+  // capó: escalón hacia el morro (más bajo, tono más claro = catch de luz)
+  box(g, cabinFront, 0, bodyZ, Math.max(0.02, hoodEnd - cabinFront), W, deckH, shade(paint, 1.08));
+  // maletero: escalón hacia la cola (tono algo más oscuro)
+  box(g, trunkStart, 0, bodyZ, Math.max(0.02, cabinBack - trunkStart), W, deckH, shade(paint, 0.94));
+  // parachoques delantero y trasero, más bajos y en tono oscuro propio (no pintura)
+  box(g, hoodEnd, 0, bodyZ, L - hoodEnd, W, bumpH, bumperColor);
+  box(g, 0, 0, bodyZ, trunkStart, W, bumpH, bumperColor);
+  // esquinas achaflanadas en los parachoques para sugerir redondeo
+  poly(g, [[L, 0.08, bodyZ], [L, W - 0.08, bodyZ], [L - 0.05, W, bodyZ], [L - 0.05, 0, bodyZ]], shade(bumperColor, 0.75), 0.85);
+  poly(g, [[0, 0.08, bodyZ], [0, W - 0.08, bodyZ], [0.05, W, bodyZ], [0.05, 0, bodyZ]], shade(bumperColor, 0.75), 0.85);
+  // líneas de carácter (separación capó/zócalo y zócalo/maletero) para dar aspecto "paneleado"
+  outline(g, [[cabinFront, 0.02, bodyZ + deckH], [cabinFront, W - 0.02, bodyZ + deckH]], 0x000000, 0.22, 1);
+  outline(g, [[cabinBack, 0.02, bodyZ + deckH], [cabinBack, W - 0.02, bodyZ + deckH]], 0x000000, 0.22, 1);
+
+  // guardabarros ensanchados sobre cada rueda — look JDM "flared fenders"
+  const flare = (cx: number) => {
+    const fl = Math.min(L * 0.16, 0.34);
+    const x0 = Math.max(0, cx - fl / 2), dx = Math.min(fl, L - x0);
+    const fz = bodyZ + m.bodyH * 0.08;
+    box(g, x0, -0.045, fz, dx, 0.09, m.bodyH * 0.5, shade(paint, 0.7));
+    box(g, x0, W - 0.045, fz, dx, 0.09, m.bodyH * 0.5, shade(paint, 0.7));
+  };
+  flare(L * 0.2); flare(L * 0.82);
+
+  wheel(L * 0.2, 0); wheel(L * 0.82, 0);
 
   // cabina ahusada: parabrisas y luneta inclinados + techo angosto + ventanas laterales + pilar central
   const cs = m.cabinStart, cl = m.cabinLen, ch = m.cabinH, y0 = 0.12, y1 = W - 0.12;
@@ -63,12 +104,12 @@ export function drawCar(g: Phaser.GameObjects.Graphics, m: VehicleModel, build: 
   poly(g, [[0.15, 0.05, topZ + 0.002], [L - 0.2, 0.15, topZ + 0.002], [L - 0.2, 0.3, topZ + 0.002], [0.15, 0.25, topZ + 0.002]], 0xffffff, 0.08);
 
   // body kit (igual que antes: solo si está equipado)
-  if (build.front !== 'front-stock') box(g, -0.08, 0.08, bodyZ, 0.1, W - 0.16, m.bodyH * 0.55, shade(paint, 0.75));
+  if (build.front !== 'front-stock') box(g, hoodEnd - 0.02, 0.08, bodyZ, 0.1, W - 0.16, bumpH * 0.9, shade(paint, 0.75));
   if (build.skirt !== 'skirt-stock') {
-    box(g, 0.15, -0.03, bodyZ, L - 0.3, 0.06, m.bodyH * 0.35, shade(paint, 0.6));
-    box(g, 0.15, W - 0.03, bodyZ, L - 0.3, 0.06, m.bodyH * 0.35, shade(paint, 0.6));
+    box(g, trunkStart + 0.02, -0.03, bodyZ, hoodEnd - trunkStart - 0.04, 0.06, m.bodyH * 0.35, shade(paint, 0.6));
+    box(g, trunkStart + 0.02, W - 0.03, bodyZ, hoodEnd - trunkStart - 0.04, 0.06, m.bodyH * 0.35, shade(paint, 0.6));
   }
-  if (build.hood !== 'hood-stock') box(g, L * 0.5, 0.15, topZ, L * 0.22, W - 0.3, 0.05, shade(paint, 0.7));
+  if (build.hood !== 'hood-stock') box(g, (cabinFront + hoodEnd) / 2 - (hoodEnd - cabinFront) * 0.1, 0.15, bodyZ + deckH, (hoodEnd - cabinFront) * 0.55, W - 0.3, 0.05, shade(paint, 0.7));
   if (build.spoiler !== 'spoiler-stock') {
     box(g, L * 0.92, 0.12, topZ + ch * 0.4, 0.06, W - 0.24, 0.03, 0x1c1c1c);
     box(g, L * 0.9, 0.2, topZ, 0.04, 0.06, ch * 0.4, 0x1c1c1c);
@@ -81,11 +122,12 @@ export function drawCar(g: Phaser.GameObjects.Graphics, m: VehicleModel, build: 
       [L - 0.05, W / 2 + 0.08, topZ + 0.01], [0.05, W / 2 + 0.08, topZ + 0.01]], stripe.color);
   }
 
-  // faros delanteros (x=L) y traseros (x=0)
-  poly(g, [[L, 0.1, bodyZ + 0.18], [L, 0.42, bodyZ + 0.18], [L, 0.42, bodyZ + 0.28], [L, 0.1, bodyZ + 0.28]], 0xfff2a8);
-  poly(g, [[L, W - 0.42, bodyZ + 0.18], [L, W - 0.1, bodyZ + 0.18], [L, W - 0.1, bodyZ + 0.28], [L, W - 0.42, bodyZ + 0.28]], 0xfff2a8);
-  poly(g, [[0, 0.1, bodyZ + 0.18], [0, 0.34, bodyZ + 0.18], [0, 0.34, bodyZ + 0.27], [0, 0.1, bodyZ + 0.27]], 0xff4d4d, 0.9);
-  poly(g, [[0, W - 0.34, bodyZ + 0.18], [0, W - 0.1, bodyZ + 0.18], [0, W - 0.1, bodyZ + 0.27], [0, W - 0.34, bodyZ + 0.27]], 0xff4d4d, 0.9);
+  // faros delanteros (x=L) y traseros (x=0), ubicados sobre el propio parachoques
+  const lz0 = bodyZ + bumpH * 0.32, lz1 = bodyZ + bumpH * 0.88;
+  poly(g, [[L, 0.1, lz0], [L, 0.42, lz0], [L, 0.42, lz1], [L, 0.1, lz1]], 0xfff2a8);
+  poly(g, [[L, W - 0.42, lz0], [L, W - 0.1, lz0], [L, W - 0.1, lz1], [L, W - 0.42, lz1]], 0xfff2a8);
+  poly(g, [[0, 0.1, lz0], [0, 0.34, lz0], [0, 0.34, lz1 * 0.98], [0, 0.1, lz1 * 0.98]], 0xff4d4d, 0.9);
+  poly(g, [[0, W - 0.34, lz0], [0, W - 0.1, lz0], [0, W - 0.1, lz1 * 0.98], [0, W - 0.34, lz1 * 0.98]], 0xff4d4d, 0.9);
 
   wheel(L * 0.2, W); wheel(L * 0.82, W);
 
