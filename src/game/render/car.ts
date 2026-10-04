@@ -8,7 +8,7 @@ import { box, iso, outline, poly, shade, shadowBlob } from './iso';
 // ahusada con parabrisas/techo/ventanas independientes, parachoques, espejos, luces, body kit).
 // Fase JDM: silueta por segmentos (capó/maletero escalonados + parachoques propios + guardabarros
 // ensanchados) en vez de una caja única, para dejar de verse "cuadrado" — misma arquitectura (box/poly).
-const RIM_SIZE: Record<string, [number, number]> = { street: [26, 30], sport: [30, 34], wide: [35, 40] };
+const RIM_SIZE: Record<string, [number, number]> = { street: [16, 18], sport: [18, 21], wide: [21, 24] };
 const SUSPENSION_DROP: Record<string, number> = { 'susp-street': 0, 'susp-sport': 0.06, 'susp-race': 0.11 };
 
 export function drawCar(g: Phaser.GameObjects.Graphics, m: VehicleModel, build: CarBuild) {
@@ -40,6 +40,7 @@ export function drawCar(g: Phaser.GameObjects.Graphics, m: VehicleModel, build: 
     g.lineStyle(1, shade(rimColor, 1.25), 0.6).strokeEllipse(p.x, p.y, rw * 0.58, rh * 0.58);
     g.fillStyle(0x111111, 1).fillCircle(p.x, p.y, 2.6);
   };
+  wheel(L * 0.2, 0); wheel(L * 0.82, 0); // ruedas traseras (lado oculto), dibujadas ANTES del cuerpo para que éste las tape
 
   // --- silueta por segmentos: maletero / zócalo medio / cabina / capó, cada extremo con su
   // propio parachoques más bajo y de otro tono — rompe la caja única y sugiere curvatura.
@@ -49,8 +50,8 @@ export function drawCar(g: Phaser.GameObjects.Graphics, m: VehicleModel, build: 
   const cabinFront = m.cabinStart + m.cabinLen;
   const hoodEnd = L - noseLen;
   const trunkStart = tailLen;
-  const deckH = m.bodyH * 0.84;
-  const bumpH = m.bodyH * 0.56;
+  const deckH = m.bodyH * 0.93;
+  const bumpH = m.bodyH * 0.68;
   const bumperColor = shade(paint, 0.4);
 
   // zócalo/guardabarros bajo toda la cabina (altura completa)
@@ -74,12 +75,10 @@ export function drawCar(g: Phaser.GameObjects.Graphics, m: VehicleModel, build: 
     const fl = Math.min(L * 0.16, 0.34);
     const x0 = Math.max(0, cx - fl / 2), dx = Math.min(fl, L - x0);
     const fz = bodyZ + m.bodyH * 0.08;
-    box(g, x0, -0.045, fz, dx, 0.09, m.bodyH * 0.5, shade(paint, 0.7));
-    box(g, x0, W - 0.045, fz, dx, 0.09, m.bodyH * 0.5, shade(paint, 0.7));
+    box(g, x0, -0.025, fz, dx, 0.05, m.bodyH * 0.46, shade(paint, 0.72));
+    box(g, x0, W - 0.025, fz, dx, 0.05, m.bodyH * 0.46, shade(paint, 0.72));
   };
   flare(L * 0.2); flare(L * 0.82);
-
-  wheel(L * 0.2, 0); wheel(L * 0.82, 0);
 
   // cabina ahusada: parabrisas y luneta inclinados + techo angosto + ventanas laterales + pilar central
   const cs = m.cabinStart, cl = m.cabinLen, ch = m.cabinH, y0 = 0.12, y1 = W - 0.12;
