@@ -6,6 +6,7 @@ import { vehicleById } from '../data/vehicles';
 import { bus } from './bus';
 import { fadeIn, pulse, sparkle } from './fx';
 import { drawCar } from './render/car';
+import { CAR_SPRITE_PAINTS, hasSprite, spriteKey, spriteUrl } from '../data/carSprites';
 import {
   ACTIVE_ANCHOR, BARREL, STORAGE_SLOTS, TIRE_RACK, TOOL_CABINET,
   drawDecor, drawFloor, drawLifts, drawLighting, drawShell, drawStorageSlot,
@@ -14,6 +15,7 @@ import { iso } from './render/iso';
 
 export class GarageScene extends Phaser.Scene {
   private carGfx!: Phaser.GameObjects.Graphics;
+  private carSprite!: Phaser.GameObjects.Image;
   private carZone!: Phaser.GameObjects.Zone;
   private carAnchor = { x: 0, y: 0 };
   private floorGfx!: Phaser.GameObjects.Graphics;
@@ -27,6 +29,14 @@ export class GarageScene extends Phaser.Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>;
   constructor() { super('garage'); }
+
+  preload() {
+    // Sprites 3D-renderizados (prototipo, ver src/data/carSprites.ts). Los modelos sin
+    // entrada siguen con el arte vectorial de render/car.ts — no se carga nada para esos.
+    for (const [vehicleId, paints] of Object.entries(CAR_SPRITE_PAINTS)) {
+      for (const paintId of paints) this.load.image(spriteKey(vehicleId, paintId), spriteUrl(vehicleId, paintId));
+    }
+  }
 
   create() {
     actions.goToScene('garage');
@@ -60,6 +70,7 @@ export class GarageScene extends Phaser.Scene {
 
     this.carAnchor = iso(ACTIVE_ANCHOR.x, ACTIVE_ANCHOR.y, 0.12);
     this.carGfx = this.add.graphics().setPosition(this.carAnchor.x, this.carAnchor.y);
+    this.carSprite = this.add.image(this.carAnchor.x, this.carAnchor.y, '__MISSING').setVisible(false).setOrigin(0.5, 0.86);
     this.carZone = this.add.zone(this.carAnchor.x, this.carAnchor.y, 210, 120).setInteractive({ useHandCursor: true });
     this.carZone.on('pointerup', (ptr: Phaser.Input.Pointer) => {
       if (ptr.getDistance() < 8) bus.emit('open-panel', getDisplayVehicle().isJob ? 'jobs' : 'garage');
@@ -116,9 +127,20 @@ export class GarageScene extends Phaser.Scene {
     const build: CarBuild = pv && pv.uid === disp.uid ? { ...disp.build, [pv.category]: pv.value } : disp.build;
     const carKey = JSON.stringify(build) + '|' + disp.modelId + '|' + disp.isJob;
     if (carKey !== this.carKey) {
-      drawCar(this.carGfx, m, build);
-      this.carGfx.setScale(build.facing, 1);
       const centerLocal = iso(m.length / 2, m.width / 2, 0);
+      if (hasSprite(disp.modelId, build.paint)) {
+        this.carGfx.clear(); this.carGfx.setVisible(false);
+        this.carSprite.setVisible(true)
+          .setTexture(spriteKey(disp.modelId, build.paint))
+          .setPosition(this.carAnchor.x + centerLocal.x, this.carAnchor.y + centerLocal.y + 34)
+          .setDisplaySize(210, 210 * this.carSprite.height / this.carSprite.width)
+          .setFlipX(build.facing < 0);
+      } else {
+        this.carSprite.setVisible(false);
+        this.carGfx.setVisible(true);
+        drawCar(this.carGfx, m, build);
+        this.carGfx.setScale(build.facing, 1);
+      }
       this.carZone.setPosition(this.carAnchor.x + centerLocal.x, this.carAnchor.y + centerLocal.y - 20);
       if (!this.firstCarSync) sparkle(this, this.carAnchor.x + centerLocal.x, this.carAnchor.y + centerLocal.y - 30);
       this.firstCarSync = false;
