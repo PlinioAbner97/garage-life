@@ -1,4 +1,30 @@
-{"name":"garage-life","private":true,"version":"0.1.0","type":"module",
-"scripts":{"dev":"vite","build":"tsc --noEmit && vite build","preview":"vite preview"},
-"dependencies":{"phaser":"^3.90.0","react":"^18.3.1","react-dom":"^18.3.1"},
-"devDependencies":{"@types/react":"^18.3.3","@types/react-dom":"^18.3.0","@vitejs/plugin-react":"^4.3.1","typescript":"^5.5.4","vite":"^5.4.0"}}
+{
+  "name": "garage-life",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "build:single": "tsc && SINGLE=1 vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "^5.9.3",
+    "vite": "^5.4.21",
+    "vite-plugin-singlefile": "^2.3.3"
+  },
+  "description": "Juego de taller de autos estilo Car Town, hecho con **tu garaje de Blender** (`cartown.blend`). Phaser 3 (escena isométrica) + React/TypeScript (menús y HUD) + Vite. Español.",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

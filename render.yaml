@@ -1,0 +1,8 @@
+# Render Blueprint: sitio estático (Vite). En Render: New + > Blueprint, o Static Site con estos mismos valores.
+services:
+  - type: web
+    name: garage-life
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    pullRequestPreviewsEnabled: false

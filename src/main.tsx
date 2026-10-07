@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import App from './ui/App';
-import { hydrate } from './core/store';
+import { App } from './ui/App';
 import './ui/styles.css';
-hydrate().then(() => createRoot(document.getElementById('root')!).render(<App />));
+
+createRoot(document.getElementById('root')!).render(<App />);
