@@ -46,3 +46,10 @@ Todos igualan el tamaño en pantalla del Falcon GT (`SPRITE_SCALE` en `src/engin
 - Los logos de Mitsubishi y Subaru del modelo se ocultaron en los renders y los autos usan nombres ficticios
   (Falcon GT, Kobalt 22) para poder publicar el juego sin problemas de marcas.
 - Supabase: implementa `SaveStore` (`src/core/save.ts`) y pásalo a `GameStore`.
+
+## App en el celular (PWA)
+Abre https://garagelife.onrender.com en el teléfono y agrégala a la pantalla de inicio:
+- **iPhone (Safari):** Compartir → *Agregar a pantalla de inicio*.
+- **Android (Chrome):** menú ⋮ → *Instalar app* / *Agregar a pantalla de inicio*.
+
+Incluye manifest, service worker (funciona sin conexión tras la primera visita) e íconos en `public/`. El logo se regenera desde `tools/logo.svg`.
