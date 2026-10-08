@@ -33,3 +33,10 @@ export const SPRITE_INFO = Object.fromEntries(
  * el Kobalt (Subaru) salió 6% más grande y se reduce aquí desde el piso.
  */
 export const SPRITE_SCALE: Record<SpriteKey, number> = { ecl: 1, sub: 0.939, sup: 1, r34: 1, evo: 1 };
+
+/**
+ * El fondo (garage_bg.png) se renderiza con margen extra alrededor del encuadre original 1920x1080
+ * (tools/render_bg.py) para que no se recorten vigas y paredes. Se dibuja en (x, y) negativos, así las
+ * coordenadas de proyección y de los sprites de los autos no cambian.
+ */
+export const BG = { x: -116, y: -240, w: 2094, h: 1320 };

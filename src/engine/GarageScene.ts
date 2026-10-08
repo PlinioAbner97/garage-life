@@ -5,9 +5,10 @@ import { getModel } from '../data/vehicles';
 import { findPaint, findRim } from '../data/parts';
 import { getJob } from '../data/jobs';
 import { CarPainter, type PainterMap } from './recolor';
-import { ASSETS, PROJ, SPRITE_INFO, SPRITE_KEYS, SPRITE_SCALE } from './assets';
+import { ASSETS, BG, PROJ, SPRITE_INFO, SPRITE_KEYS, SPRITE_SCALE } from './assets';
 
-const W = 1920, H = 1080;
+// Mundo = imagen de fondo (con margen extra). Centro y tamaño salen de BG.
+const WW = BG.w, HH = BG.h, CX = BG.x + BG.w / 2, CY = BG.y + BG.h / 2;
 type Pt = { x: number; y: number };
 /** Proyección ortográfica de la cámara de Blender: mundo (x,y,z) -> píxel del render. */
 const project = (x: number, y: number, z = 0): Pt => ({
@@ -49,13 +50,13 @@ export class GarageScene extends Phaser.Scene {
         this.textures.get(`${k}-mask`).getSourceImage() as HTMLImageElement,
       );
     });
-    this.add.image(0, 0, 'bg').setOrigin(0).setDepth(0);
+    this.add.image(BG.x, BG.y, 'bg').setOrigin(0).setDepth(0);
     this.slotGfx = this.add.graphics().setDepth(1);
     this.ring = this.add.graphics().setDepth(2);
     this.buildSlotLabels();
 
     const cam = this.cameras.main;
-    cam.setBounds(-300, -300, W + 600, H + 600);
+    cam.setBounds(BG.x - 300, BG.y - 300, WW + 600, HH + 600);
     this.refit();
     this.scale.on('resize', () => this.refit(true));
     this.setupInput();
@@ -70,17 +71,17 @@ export class GarageScene extends Phaser.Scene {
   // ---------- cámara
   private refit(onlyIfFitted = false) {
     const cam = this.cameras.main;
-    const z = Math.min(this.scale.width / W, this.scale.height / H) * 1.02;
+    const z = Math.min(this.scale.width / WW, this.scale.height / HH) * 1.02;
     const wasFitted = Math.abs(cam.zoom - this.fitZoom) < 0.001;
     this.fitZoom = z;
-    if (!onlyIfFitted || wasFitted) { cam.setZoom(z); cam.centerOn(W / 2, H / 2); }
+    if (!onlyIfFitted || wasFitted) { cam.setZoom(z); cam.centerOn(CX, CY); }
   }
   focusOn(x: number, y: number, zoom = Math.max(this.fitZoom * 1.7, 1)) {
     const cam = this.cameras.main;
     cam.pan(x, y, 450, 'Sine.easeInOut'); cam.zoomTo(zoom, 450, 'Sine.easeInOut');
   }
   resetView() {
-    const cam = this.cameras.main; cam.pan(W / 2, H / 2, 400, 'Sine.easeInOut'); cam.zoomTo(this.fitZoom, 400, 'Sine.easeInOut');
+    const cam = this.cameras.main; cam.pan(CX, CY, 400, 'Sine.easeInOut'); cam.zoomTo(this.fitZoom, 400, 'Sine.easeInOut');
   }
   zoomBy(f: number) {
     const cam = this.cameras.main;
