@@ -53,3 +53,12 @@ Abre https://garagelife.onrender.com en el teléfono y agrégala a la pantalla d
 - **Android (Chrome):** menú ⋮ → *Instalar app* / *Agregar a pantalla de inicio*.
 
 Incluye manifest, service worker (funciona sin conexión tras la primera visita) e íconos en `public/`. El logo se regenera desde `tools/logo.svg`.
+
+## Cuentas y guardado en la nube (Supabase)
+Sin configurar nada el juego guarda en el navegador. Para que cada jugador tenga cuenta y su progreso en cualquier dispositivo:
+1. Crea un proyecto gratis en https://supabase.com.
+2. SQL Editor → pega y ejecuta `supabase/schema.sql` (tabla `saves` con seguridad por fila: cada jugador solo ve la suya).
+3. Authentication → Providers → Email: para entrar al instante desactiva **Confirm email** (si lo dejas activo, el jugador debe confirmar su correo).
+4. Settings → API: copia **Project URL** y **anon public key** a las variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (en Render: servicio → Environment; en local: `.env.local`, ver `.env.example`) y vuelve a desplegar.
+
+Al crear cuenta, si ya había una partida local en ese dispositivo se sube a la cuenta. Nota: el guardado lo escribe el cliente, así que un jugador técnico podría editar su propia partida; para un juego competitivo habría que mover la lógica de dinero al servidor.

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { createGame } from '../engine/game';
-import { store } from '../core/store';
+import { auth } from '../core/auth';
 import { useGame } from './hooks';
 import { StartScreen } from './StartScreen';
 import { Hud } from './Hud';
@@ -11,7 +11,7 @@ export function App() {
   const { ui } = useGame();
 
   useEffect(() => {
-    void store.init();
+    void auth.init();
     const game = createGame(host.current!);
     return () => game.destroy(true);
   }, []);

@@ -34,6 +34,7 @@ export class GameStore {
   hasSave = false;
 
   constructor(private backend: SaveStore = new LocalSaveStore()) {}
+  private pendingFlush = () => { if (this.persistTimer) { window.clearTimeout(this.persistTimer); this.persistTimer = undefined; void this.backend.save(this.save); } };
 
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; };
   getSnapshot = () => this.snap;
@@ -50,11 +51,21 @@ export class GameStore {
   }
   private setUI(patch: Partial<UIState>) { this.ui = { ...this.ui, ...patch }; this.emit(); }
 
-  async init() {
-    const d = await this.backend.load();
+  /** Cambia de backend (modo local o cuenta en la nube) y carga esa partida. Si la cuenta es nueva y había partida local, la migra. */
+  async useBackend(b: SaveStore, migrateFrom?: SaveStore) {
+    this.pendingFlush();
+    this.backend = b; this.save = freshSave(); this.hasSave = false;
+    this.setUI({ loaded: false, screen: 'start', panel: null, selectedId: null, preview: null });
+    let d = await b.load();
+    if (!d && migrateFrom) {
+      const local = await migrateFrom.load();
+      if (local) { try { await b.save(local); await migrateFrom.clear(); d = local; } catch { /* se queda local */ } }
+    }
     if (d) { this.save = d; this.hasSave = true; }
     this.setUI({ loaded: true });
   }
+  /** Guarda de inmediato (al cerrar o ocultar la app). */
+  flush() { this.pendingFlush(); }
 
   toast(text: string, kind: Toast['kind'] = 'ok') {
     const t = { id: this.toastSeq++, text, kind };
@@ -183,3 +194,5 @@ export class GameStore {
 }
 
 export const store = new GameStore();
+window.addEventListener('pagehide', () => store.flush());
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') store.flush(); });

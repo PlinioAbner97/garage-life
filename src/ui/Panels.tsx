@@ -1,3 +1,5 @@
+import { auth } from '../core/auth';
+import { useAuth } from './useAuth';
 import { useEffect, useState, type ReactNode } from 'react';
 import { store } from '../core/store';
 import { SELL_RATIO, SLOT_COUNT, SLOT_UNLOCK_COST } from '../data/config';
@@ -190,6 +192,7 @@ function CustomizePanel() {
 
 function SettingsPanel() {
   const { save } = useGame();
+  const a = useAuth();
   return (
     <>
       <div className="stats">
@@ -199,9 +202,10 @@ function SettingsPanel() {
       </div>
       <div className="list">
         <button className="btn" onClick={() => store.toMenu()}>🏠 Volver al menú</button>
+        {a.email && <button className="btn" onClick={() => void auth.signOut()}>🚪 Cerrar sesión</button>}
         <button className="btn ghost danger" onClick={() => { if (confirm('¿Borrar toda tu partida? No se puede deshacer.')) void store.resetAll(); }}>🗑️ Borrar partida</button>
       </div>
-      <p className="muted">Tu progreso se guarda automáticamente en este navegador.</p>
+      <p className="muted">{a.email ? `Sesión: ${a.email}. Tu progreso se guarda en tu cuenta y lo ves desde cualquier dispositivo.` : 'Tu progreso se guarda automáticamente en este navegador.'}</p>
     </>
   );
 }
