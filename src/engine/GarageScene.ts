@@ -4,6 +4,7 @@ import { SLOT_COUNT, SLOT_UNLOCK_COST, SLOT_WORLD } from '../data/config';
 import { getModel } from '../data/vehicles';
 import { findPaint, findRim } from '../data/parts';
 import { getJob } from '../data/jobs';
+import { dpr, TEXT_RES } from './dpr';
 import { CarPainter, type PainterMap } from './recolor';
 import { ASSETS, BG, PROJ, SPRITE_INFO, SPRITE_KEYS, SPRITE_SCALE } from './assets';
 
@@ -76,7 +77,7 @@ export class GarageScene extends Phaser.Scene {
     this.fitZoom = z;
     if (!onlyIfFitted || wasFitted) { cam.setZoom(z); cam.centerOn(CX, CY); }
   }
-  focusOn(x: number, y: number, zoom = Math.max(this.fitZoom * 1.7, 1)) {
+  focusOn(x: number, y: number, zoom = Math.max(this.fitZoom * 1.7, dpr())) {
     const cam = this.cameras.main;
     cam.pan(x, y, 450, 'Sine.easeInOut'); cam.zoomTo(zoom, 450, 'Sine.easeInOut');
   }
@@ -156,7 +157,7 @@ export class GarageScene extends Phaser.Scene {
     for (let i = 0; i < SLOT_COUNT; i++) {
       const c = project(SLOT_WORLD[i][0], SLOT_WORLD[i][1]);
       const t = this.add.text(c.x, c.y, '', { fontFamily: 'Fredoka, system-ui', fontSize: '26px', color: '#ffffff', stroke: '#0b1020', strokeThickness: 6, align: 'center' })
-        .setOrigin(0.5).setDepth(3);
+        .setOrigin(0.5).setDepth(3).setResolution(TEXT_RES);
       this.slotTexts.push(t);
     }
   }
@@ -206,8 +207,8 @@ export class GarageScene extends Phaser.Scene {
         const sprite = this.add.image(0, 0, key).setOrigin(0).setData('carId', car.id);
         sprite.setInteractive({ pixelPerfect: true, alphaTolerance: 30 });
         const bar = this.add.graphics().setDepth(900);
-        const icon = this.add.text(0, 0, '', { fontSize: '44px' }).setOrigin(0.5).setDepth(901);
-        const tag = this.add.text(0, 0, '', { fontFamily: 'Fredoka, system-ui', fontSize: '22px', color: '#fff', stroke: '#0b1020', strokeThickness: 5 }).setOrigin(0.5).setDepth(901);
+        const icon = this.add.text(0, 0, '', { fontSize: '44px' }).setOrigin(0.5).setDepth(901).setResolution(TEXT_RES);
+        const tag = this.add.text(0, 0, '', { fontFamily: 'Fredoka, system-ui', fontSize: '22px', color: '#fff', stroke: '#0b1020', strokeThickness: 5 }).setOrigin(0.5).setDepth(901).setResolution(TEXT_RES);
         v = { sprite, texKey: key, model: car.model, slot: -1, bar, icon, tag };
         this.cars.set(car.id, v);
       }
