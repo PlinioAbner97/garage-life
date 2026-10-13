@@ -36,11 +36,19 @@ def pbsdf(name, color, rough, metal=0.0):
     n = [x for x in m.node_tree.nodes if x.bl_idname == 'ShaderNodeBsdfPrincipled'][0]
     n.inputs['Base Color'].default_value = color; n.inputs['Roughness'].default_value = rough; n.inputs['Metallic'].default_value = metal
     return m
-floor = pbsdf('R_LotFloor', (0.06, 0.07, 0.085, 1), 0.62, 0.04); wall = bpy.data.materials['Dark Walls']
+floor = pbsdf('R_LotFloor', (0.05, 0.06, 0.08, 1), float(os.environ.get('FROUGH', '0.24')), 0.18); wall = bpy.data.materials['Dark Walls']   # floor = material 'Garage Floor' del garaje original
 asph = pbsdf('R_Asphalt', (0.018, 0.02, 0.024, 1), 0.78); conc = pbsdf('R_Concrete', (0.11, 0.115, 0.125, 1), 0.85); yel = pbsdf('R_Yellow', (0.75, 0.52, 0.04, 1), 0.55)
 # luz de relleno suave sobre el lote (el garaje original trae sus propias luces solo sobre su zona)
 ld = bpy.data.lights.new('LotFill', 'AREA'); ld.shape = 'SQUARE'; ld.size = 70; ld.energy = float(os.environ.get('FILL', '14000')); ld.color = (0.8, 0.88, 1.0)
 lo = bpy.data.objects.new('LotFill', ld); lo.location = (0, 0, 32); bpy.context.scene.collection.objects.link(lo)
+if os.environ.get('GRID'):
+    # mismas luces de techo del garaje original (techo y taller), repetidas en rejilla: el suelo se ve igual en todo el lote
+    ld.energy = 0
+    for gx in range(-24, 25, 4):
+        for gy in (-14, 0, 14):
+            for (nm, dy, z, en, sx, sy, col) in (('C', 0.0, 6.8, 900, 4.0, 1.0, (0.82, 0.9, 1.0)), ('W', 2.2, 5.4, 450, 2.4, 0.4, (0.72, 0.84, 1.0))):
+                l = bpy.data.lights.new('G' + nm, 'AREA'); l.shape = 'RECTANGLE'; l.size = sx; l.size_y = sy; l.energy = en * float(os.environ.get('GRID')); l.color = col
+                ob = bpy.data.objects.new('G' + nm, l); ob.location = (gx, gy + dy, z); bpy.context.scene.collection.objects.link(ob)
 MAP = {'GL_V8_Floor': floor, 'GL_V8_Wall': wall, 'GL_V11_Asphalt': asph, 'GL_V11_Concrete': conc, 'GL_V11_Yellow': yel}
 for o in bpy.data.objects:
     if o.type != 'MESH': continue
@@ -51,7 +59,7 @@ for o in bpy.data.objects:
     if o.name == 'GL_V8_WALL_RIGHT':
         o.scale.z = 0.14; o.location.z = 0.28   # 0.56 m de alto
 for o in bpy.data.objects:
-    if o.type == 'LIGHT' and o.name != 'LotFill': o.hide_render = True; o.hide_viewport = True   # las luces del garaje original ya estan en su propia imagen
+    if o.type == 'LIGHT' and not o.name.startswith(('LotFill', 'GC', 'GW')): o.hide_render = True; o.hide_viewport = True   # las luces del garaje original ya estan en su propia imagen
 
 NW, NH = W + left + right, H + top + bottom
 orig = cam.data.ortho_scale

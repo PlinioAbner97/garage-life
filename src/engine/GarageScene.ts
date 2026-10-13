@@ -376,7 +376,7 @@ export class GarageScene extends Phaser.Scene {
 
   /** Acabados: tinte MULTIPLY sobre el suelo y los muros del garaje (debajo de autos y accesorios). */
   private drawStyle(s: Snapshot) {
-    const fl = s.save.style?.floor ?? 'stock', wl = s.save.style?.wall ?? 'stock', sig = fl + wl;
+    const fl = s.save.style?.floor ?? 'stock', wl = s.save.style?.wall ?? 'stock', sig = fl + wl + (s.save.zones ?? []).join(',');
     if (sig === this.styleSig) return; this.styleSig = sig;
     const g = this.styleGfx; g.clear();
     const quad = (pts: [number, number, number][], hex: number) => {
@@ -384,7 +384,8 @@ export class GarageScene extends Phaser.Scene {
       g.fillStyle(hex, 1); g.fillPoints(pts.map(([x, y, z]) => { const q = project(x, y, z); return new Phaser.Math.Vector2(q.x, q.y); }), true);
     };
     const [x0, y0, x1, y1] = GARAGE_RECT, H = 3.7, fy = y1 - 0.48, rx = x1 - 0.2;
-    quad([[x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]], findFloor(fl).hex);
+    const flHex = findFloor(fl).hex;
+    for (const r of [GARAGE_RECT, ...ZONES.filter((z) => hasZone(s.save, z.id)).map((z) => z.rect)]) quad([[r[0], r[1], 0], [r[2], r[1], 0], [r[2], r[3], 0], [r[0], r[3], 0]], flHex);
     quad([[x0, fy, 0], [x1, fy, 0], [x1, fy, H], [x0, fy, H]], findWall(wl).hex);
     quad([[rx, y0, 0], [rx, fy, 0], [rx, fy, H], [rx, y0, H]], findWall(wl).hex);
   }
