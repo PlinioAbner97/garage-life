@@ -1,4 +1,7 @@
 import bg from '../assets/garage_bg.png';
+import { GARAGE_OFFSET } from '../data/config';
+import lot from '../assets/lot.webp';
+import streets from '../assets/streets.webp';
 import eclBeauty from '../assets/ecl_beauty.png';
 import eclMask from '../assets/ecl_mask.png';
 import subBeauty from '../assets/sub_beauty.png';
@@ -14,8 +17,8 @@ import type { SpriteKey } from '../data/vehicles';
 
 export const SPRITE_KEYS: SpriteKey[] = ['ecl', 'sub', 'sup', 'r34', 'evo'];
 
-export const ASSETS: { bg: string } & Record<SpriteKey, { beauty: string; mask: string }> = {
-  bg,
+export const ASSETS: { bg: string; lot: string; streets: string } & Record<SpriteKey, { beauty: string; mask: string }> = {
+  bg, lot, streets,
   ecl: { beauty: eclBeauty, mask: eclMask },
   sub: { beauty: subBeauty, mask: subMask },
   sup: { beauty: supBeauty, mask: supMask },
@@ -39,4 +42,13 @@ export const SPRITE_SCALE: Record<SpriteKey, number> = { ecl: 1, sub: 0.939, sup
  * (tools/render_bg.py) para que no se recorten vigas y paredes. Se dibuja en (x, y) negativos, así las
  * coordenadas de proyección y de los sprites de los autos no cambian.
  */
-export const BG = { x: -116, y: -240, w: 2094, h: 1320 };
+/** Rectángulo (px de mundo) del fondo del garaje, ya desplazado a su nuevo lugar (GARAGE_OFFSET). */
+export const BG = { x: -116 + GARAGE_OFFSET[1] * 46.1048 + GARAGE_OFFSET[0] * 59.5278, y: -240 + GARAGE_OFFSET[1] * -27.5958 + GARAGE_OFFSET[0] * 21.3732, w: 2094, h: 1320 };
+
+/**
+ * Capas del lote (tools/render_lot.py, misma cámara que el garaje: los píxeles coinciden). Rectángulos en px de mundo.
+ * LOT = suelo de las 6 zonas del GL_CARTOWN_GARAGE_V8 + muros (se dibuja bajo garage_bg.png).
+ * STREETS = calles y aceras GL_GARAGE_STREETS_V11, renderizadas a la mitad de resolución (scale 2).
+ */
+export const LOT = { x: -1490, y: -770, w: 4840, h: 2500 };
+export const STREETS = { x: -2440, y: -950, w: 6750, h: 3120, scale: 2 };

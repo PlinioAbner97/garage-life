@@ -2,11 +2,14 @@ import { auth } from '../core/auth';
 import { useAuth } from './useAuth';
 import { useEffect, useState, type ReactNode } from 'react';
 import { store } from '../core/store';
-import { SELL_RATIO, SLOT_COUNT, SLOT_UNLOCK_COST } from '../data/config';
+import { FUTURE_ZONES, SELL_RATIO, SLOT_COUNT, SLOT_UNLOCK_COST, TOTAL_SLOTS, ZONES, getZone } from '../data/config';
+import { hasZone, isSlotUnlocked } from '../core/save';
 import { VEHICLES, getModel } from '../data/vehicles';
 import { JOBS, getJob } from '../data/jobs';
 import { PAINTS, RIMS, findPaint, findRim, type ColorPart } from '../data/parts';
 import { bridge } from '../engine/bridge';
+import { ITEMS, CATEGORIES, FLOOR_FINISHES, WALL_FINISHES, getItem, type ItemDef, type ItemCategory } from '../data/items';
+import { itemUrl } from '../data/itemAssets';
 import { fmt, fmtTime, useGame } from './hooks';
 
 function Sheet({ title, onClose, children, side }: { title: string; onClose: () => void; children: ReactNode; side?: boolean }) {
@@ -24,6 +27,8 @@ export function Panels() {
   switch (ui.panel) {
     case 'garage': return <Sheet title="Mi garaje" onClose={close}><GaragePanel /></Sheet>;
     case 'shop': return <Sheet title="Tienda" onClose={close}><ShopPanel /></Sheet>;
+    case 'inventory': return <Sheet title="Inventario" onClose={close}><InventoryPanel /></Sheet>;
+    case 'expand': return <Sheet title="Expansiones del terreno" onClose={close}><ExpandPanel /></Sheet>;
     case 'jobs': return <Sheet title="Trabajos del taller" onClose={close}><JobsPanel /></Sheet>;
     case 'customize': return <Sheet title="Personalizar" side onClose={() => { store.setPreview(null); close(); }}><CustomizePanel /></Sheet>;
     case 'settings': return <Sheet title="Ajustes" onClose={close}><SettingsPanel /></Sheet>;
@@ -39,7 +44,7 @@ function GaragePanel() {
   const { save, ui } = useGame();
   return (
     <>
-      <p className="muted">{save.cars.length} / {save.slotsUnlocked} plazas ocupadas. Selecciona un auto y toca una plaza libre del garaje para moverlo.</p>
+      <p className="muted">{save.cars.length} / {Array.from({ length: TOTAL_SLOTS }, (_, i) => i).filter((i) => isSlotUnlocked(save, i)).length} plazas ocupadas. Selecciona un auto y toca una plaza libre del garaje para moverlo.</p>
       <div className="list">
         {save.cars.map((c) => {
           const m = getModel(c.model); const job = save.jobs[c.id];
@@ -64,6 +69,142 @@ function GaragePanel() {
 }
 
 function ShopPanel() {
+  const [tab, setTab] = useState<'items' | 'cars'>('items');
+  return (
+    <>
+      <div className="tabs">
+        <button className={tab === 'items' ? 'on' : ''} onClick={() => setTab('items')}>🧰 Accesorios</button>
+        <button className={tab === 'cars' ? 'on' : ''} onClick={() => setTab('cars')}>🚗 Autos y taller</button>
+      </div>
+      {tab === 'items' ? <ItemShop /> : <CarShop />}
+    </>
+  );
+}
+
+function ItemThumb({ id, size = 64 }: { id: string; size?: number }) {
+  const u = itemUrl(id, 0);
+  return u ? <img className="thumb" src={u} width={size} height={size} alt="" loading="lazy" /> : <div className="thumb ph" style={{ width: size, height: size }}>📦</div>;
+}
+
+function ItemShop() {
+  const { save } = useGame();
+  const [cat, setCat] = useState<ItemCategory | 'all'>('all');
+  const list = ITEMS.filter((i) => cat === 'all' || i.category === cat);
+  return (
+    <>
+      <div className="chips">
+        <button className={cat === 'all' ? 'on' : ''} onClick={() => setCat('all')}>Todo</button>
+        {CATEGORIES.map((c) => <button key={c.id} className={cat === c.id ? 'on' : ''} onClick={() => setCat(c.id)}>{c.icon} {c.name}</button>)}
+      </div>
+      <div className="list">
+        {list.map((it) => {
+          const n = save.inventory?.[it.id] ?? 0;
+          return (
+            <div key={it.id} className="card">
+              <ItemThumb id={it.id} />
+              <div className="grow">
+                <b>{it.name}</b><small>{it.desc}</small>
+                <small>{CATEGORIES.find((c) => c.id === it.category)?.name}{it.kind === 'wall' ? ' · va en la pared' : ''}{it.prototype ? ' · decorativo' : ''}{n ? ` · Tienes ${n}` : ''}</small>
+              </div>
+              <div className="col"><button className="btn primary" disabled={save.money < it.price} onClick={() => store.buyItem(it.id)}>${fmt(it.price)}</button></div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="muted">Lo comprado va a tu <b>📦 Inventario</b>; colócalo con <b>🛠️ Editar garaje</b>. Moverlo o guardarlo no vuelve a cobrar.</p>
+    </>
+  );
+}
+
+function InventoryPanel() {
+  const { save, ui } = useGame();
+  const [tab, setTab] = useState<'items' | 'finish'>('items');
+  const owned = ITEMS.filter((i) => (save.inventory?.[i.id] ?? 0) > 0);
+  const placedOf = (id: string) => (ui.edit?.draft ?? save.placed ?? []).filter((p) => p.item === id).length;
+  return (
+    <>
+      <div className="tabs">
+        <button className={tab === 'items' ? 'on' : ''} onClick={() => setTab('items')}>📦 Accesorios</button>
+        <button className={tab === 'finish' ? 'on' : ''} onClick={() => setTab('finish')}>🎨 Acabados</button>
+      </div>
+      {tab === 'items' ? (
+        <>
+          {owned.length === 0 && <p className="muted">Aún no tienes accesorios. Compra algunos en la 🛒 Tienda.</p>}
+          <div className="list">
+            {owned.map((it) => {
+              const qty = save.inventory![it.id], pl = placedOf(it.id), free = qty - pl;
+              return (
+                <div key={it.id} className="card">
+                  <ItemThumb id={it.id} />
+                  <div className="grow"><b>{it.name}</b><small>Tienes {qty} · colocados {pl} · libres {free}</small></div>
+                  <div className="col"><button className="btn primary" disabled={free <= 0} onClick={() => store.editAdd(it.id)}>Colocar</button></div>
+                </div>
+              );
+            })}
+          </div>
+          {owned.length > 0 && <button className="btn" style={{ marginTop: 10 }} onClick={() => store.enterEdit()}>🛠️ Editar garaje</button>}
+        </>
+      ) : <FinishPicker />}
+    </>
+  );
+}
+
+function FinishPicker() {
+  const { save } = useGame();
+  const row = (kind: 'floor' | 'wall', title: string, list: typeof FLOOR_FINISHES) => (
+    <>
+      <h3>{title}</h3>
+      <div className="swatches">
+        {list.map((f) => {
+          const active = (save.style?.[kind] ?? 'stock') === f.id, has = store.hasFinish(kind, f.id), lock = save.level < f.minLevel && !has;
+          return (
+            <button key={f.id} className={`sw ${active ? 'on' : ''}`} disabled={lock} onClick={() => store.setFinish(kind, f.id)}>
+              <i style={{ background: '#' + f.hex.toString(16).padStart(6, '0') }} />
+              <b>{f.name}</b><small>{active ? 'En uso' : has ? 'Tuyo' : lock ? `🔒 Nivel ${f.minLevel}` : `$${fmt(f.price)}`}</small>
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+  return <>{row('floor', 'Suelo', FLOOR_FINISHES)}{row('wall', 'Paredes', WALL_FINISHES)}<p className="muted">Los acabados se pueden cambiar gratis una vez comprados.</p></>;
+}
+
+function ExpandPanel() {
+  const { save } = useGame();
+  return (
+    <>
+      <p className="muted">Cada zona se une al garaje: más plazas de auto y espacio para equipamiento y decoración. Se desbloquean por nivel y GarageCoins.</p>
+      <div className="list">
+        {ZONES.map((z) => {
+          const owned = hasZone(save, z.id);
+          const lvl = save.level < z.minLevel;
+          const pre = !!z.requires && !hasZone(save, z.requires);
+          const reason = owned ? '' : lvl ? `🔒 Nivel ${z.minLevel}` : pre ? '🔒 Zona previa' : '';
+          return (
+            <div key={z.id} className={`card ${owned || reason ? 'locked' : ''}`}>
+              <div className="grow">
+                <b>{z.name}</b><small>{z.desc}</small>
+                {!owned && <small>{`Requiere nivel ${z.minLevel}${z.requires ? ` · antes: ${getZone(z.requires).name}` : ''}`}</small>}
+              </div>
+              <div className="col">
+                <button className="btn primary" disabled={owned || !!reason} onClick={() => store.buyZone(z.id)}>
+                  {owned ? '✔ Tuya' : reason || `$${fmt(z.cost)}`}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        {FUTURE_ZONES.map((f) => (
+          <div key={f.id} className="card locked"><div className="grow"><b>{f.name}</b><small>Detrás de los muros del garaje original.</small></div><div className="col"><button className="btn" disabled>Próximamente</button></div></div>
+        ))}
+      </div>
+
+    </>
+  );
+}
+
+function CarShop() {
   const { save } = useGame();
   const next = save.slotsUnlocked;
   return (

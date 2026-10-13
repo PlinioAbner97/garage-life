@@ -1,6 +1,7 @@
 import { store } from '../core/store';
 import { xpForLevel } from '../data/config';
 import { getModel } from '../data/vehicles';
+import { getItem } from '../data/items';
 import { getJob } from '../data/jobs';
 import { bridge } from '../engine/bridge';
 import { fmt, fmtTime, useGame } from './hooks';
@@ -11,7 +12,7 @@ export function Hud() {
   const car = save.cars.find((c) => c.id === ui.selectedId);
   const job = car ? save.jobs[car.id] : undefined;
   const ready = Object.values(save.jobs).filter((j) => j.done || ui.now >= j.endsAt).length;
-  const open = (p: 'garage' | 'shop' | 'jobs' | 'settings') => store.openPanel(ui.panel === p ? null : p);
+  const open = (p: 'garage' | 'shop' | 'jobs' | 'settings' | 'inventory' | 'expand') => store.openPanel(ui.panel === p ? null : p);
 
   const customize = () => {
     if (!car) { store.toast('Primero toca un auto para seleccionarlo', 'bad'); return; }
@@ -63,11 +64,34 @@ export function Hud() {
         </div>
       )}
 
+      {ui.edit ? <EditBar /> : (
       <nav className="nav">
         <button className={ui.panel === 'garage' ? 'on' : ''} onClick={() => open('garage')}><span>🚗</span>Garaje</button>
         <button className={ui.panel === 'jobs' ? 'on' : ''} onClick={() => open('jobs')}><span>🔧</span>Trabajos{ready > 0 && <em>{ready}</em>}</button>
         <button className={ui.panel === 'customize' ? 'on' : ''} onClick={customize}><span>🎨</span>Estilo</button>
         <button className={ui.panel === 'shop' ? 'on' : ''} onClick={() => open('shop')}><span>🛒</span>Tienda</button>
+        <button className={ui.panel === 'inventory' ? 'on' : ''} onClick={() => open('inventory')}><span>📦</span>Inventario</button>
+        <button onClick={() => store.enterEdit()}><span>🛠️</span>Editar garaje</button>
+        <button className={ui.panel === 'expand' ? 'on' : ''} onClick={() => open('expand')}><span>🗺️</span>Expansiones</button>
+      </nav>)}
+    </>
+  );
+}
+
+function EditBar() {
+  const { ui } = useGame();
+  const e = ui.edit!; const cur = e.draft.find((p) => p.uid === e.sel);
+  const def = e.adding ? getItem(e.adding) : cur ? getItem(cur.item) : undefined;
+  return (
+    <>
+      <div className="editinfo">{def ? <><b>{def.name}</b> · {e.adding ? 'toca o arrastra para colocar' : 'arrastra para mover'}</> : 'Toca un accesorio para moverlo, o elige uno del inventario'}</div>
+      <nav className="nav editbar">
+        <button onClick={() => store.openPanel(ui.panel === 'inventory' ? null : 'inventory')}><span>📦</span>Inventario</button>
+        <button disabled={!def} onClick={() => bridge.scene?.editRotate()}><span>⟳</span>Rotar</button>
+        <button disabled={!cur} onClick={() => cur && store.editStow(cur.uid)}><span>↩️</span>Guardar en inv.</button>
+        <button className={e.snap ? 'on' : ''} onClick={() => store.editSnap(!e.snap)}><span>▦</span>Cuadrícula</button>
+        <button onClick={() => store.editCancel()}><span>✖️</span>Cancelar</button>
+        <button className="okbtn" onClick={() => store.editSave()}><span>✔️</span>Guardar cambios</button>
       </nav>
     </>
   );

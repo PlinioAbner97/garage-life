@@ -62,3 +62,12 @@ Sin configurar nada el juego guarda en el navegador. Para que cada jugador tenga
 4. Settings → API: copia **Project URL** y **anon public key** a las variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (en Render: servicio → Environment; en local: `.env.local`, ver `.env.example`) y vuelve a desplegar.
 
 Al crear cuenta, si ya había una partida local en ese dispositivo se sube a la cuenta. Nota: el guardado lo escribe el cliente, así que un jugador técnico podría editar su propia partida; para un juego competitivo habría que mover la lógica de dinero al servidor.
+
+## Terreno, expansiones y editor del garaje
+- **Disposición**: el garaje original está pegado al muro del fondo (sin muro lateral izquierdo), la entrada de vehículos mira a la calle y las 6 zonas de expansión (patios, flancos, frente) se desbloquean por **nivel + GarageCoins** (`ZONES` en `src/data/config.ts`; costos y niveles son configurables). Se compran en **🗺️ Expansiones** o tocando la zona oscurecida.
+- **Tienda de accesorios** (`src/data/items.ts`, 12 artículos), **Inventario** (cantidad, colocados, libres) y **Editar garaje**: arrastrar, rotar (⟳), guardar en inventario, cuadrícula de 0.25 m opcional, vista previa verde/roja, *Guardar cambios* / *Cancelar* (cancelar no pierde nada). Mover o guardar un objeto nunca vuelve a cobrar; cada objeto colocado tiene `uid` único.
+- **Reglas** (`src/core/layout.ts`, puras): solo zonas desbloqueadas, nada fuera del terreno, sin choques entre objetos, sin tapar plazas, el carril de entrada ni los muebles ya dibujados; accesorios de pared solo pegados a un muro.
+- **Acabados** de suelo y paredes (tinte), en Inventario → Acabados; gratis una vez comprados.
+- **Persistencia**: `zones`, `inventory`, `placed`, `style` dentro de la partida (local o Supabase). Partidas antiguas se migran con valores vacíos.
+- **Renders**: `tools/render_lot.py` (terreno y calles V11), `tools/render_items.py` (sprites de accesorios, 4 rotaciones) con la cámara del juego.
+- **Limitaciones**: no hay backend propio, así que las compras se validan en el cliente (la partida vive en el navegador/Supabase con RLS por usuario; un jugador técnico podría alterar su propia partida). Los artículos marcados "decorativo" aún no tienen función de juego. Depuración: añadir `?debug` a la URL expone `window.__gl`.

@@ -1,17 +1,21 @@
-import { START_MONEY, SELL_RATIO, SLOT_COUNT, SLOT_UNLOCK_COST, xpForLevel } from '../data/config';
+import { START_MONEY, SELL_RATIO, SLOT_COUNT, TOTAL_SLOTS, SLOT_UNLOCK_COST, getZone, xpForLevel } from '../data/config';
+import { ITEMS, getItem, findFloor, findWall, FLOOR_FINISHES, WALL_FINISHES } from '../data/items';
+import { validate, type Placed, type Rot } from './layout';
 import { getModel } from '../data/vehicles';
 import { getJob } from '../data/jobs';
 import { findPaint, findRim } from '../data/parts';
-import { LocalSaveStore, type OwnedCar, type SaveData, type SaveStore } from './save';
+import { LocalSaveStore, isSlotUnlocked, hasZone, type OwnedCar, type SaveData, type SaveStore } from './save';
 
 export interface Toast { id: number; text: string; kind: 'ok' | 'bad' | 'level' }
 export interface UIState {
   screen: 'start' | 'game';
-  panel: null | 'garage' | 'shop' | 'jobs' | 'customize' | 'settings';
+  panel: null | 'garage' | 'shop' | 'inventory' | 'expand' | 'style' | 'jobs' | 'customize' | 'settings';
   selectedId: string | null;
   /** vista previa de personalización (no guardada) */
   preview: { carId: string; paint: string; rim: string } | null;
   toasts: Toast[];
+  /** modo "Editar garaje": borrador sin guardar hasta pulsar Guardar cambios */
+  edit: null | { draft: Placed[]; sel: string | null; adding: string | null; snap: boolean; dirty: boolean };
   loaded: boolean;
   now: number;
 }
@@ -20,13 +24,13 @@ export interface Snapshot { save: SaveData; ui: UIState }
 const freshSave = (): SaveData => ({
   v: 1, money: START_MONEY, xp: 0, level: 1,
   cars: [{ id: 'c1', model: 'falcon-gt', paint: 'stock', rim: 'stock', slot: 0 }],
-  slotsUnlocked: 2, nextCarId: 2, jobs: {}, totalEarned: 0, jobsDone: 0, tutorialDone: false,
+  slotsUnlocked: 2, nextCarId: 2, jobs: {}, totalEarned: 0, jobsDone: 0, tutorialDone: false, zones: [], inventory: {}, placed: [], style: { floor: 'stock', wall: 'stock', owned: [] },
 });
 
 /** Store único: la escena Phaser y la UI React leen y escriben aquí. Sin estado duplicado. */
 export class GameStore {
   private save: SaveData = freshSave();
-  private ui: UIState = { screen: 'start', panel: null, selectedId: null, preview: null, toasts: [], loaded: false, now: Date.now() };
+  private ui: UIState = { screen: 'start', panel: null, selectedId: null, preview: null, toasts: [], edit: null, loaded: false, now: Date.now() };
   private snap: Snapshot = { save: this.save, ui: this.ui };
   private listeners = new Set<() => void>();
   private toastSeq = 1;
@@ -43,7 +47,7 @@ export class GameStore {
     this.snap = { save: this.save, ui: this.ui };
     this.listeners.forEach((l) => l());
   }
-  private setSave(patch: Partial<SaveData>) {
+  setSave(patch: Partial<SaveData>) {
     this.save = { ...this.save, ...patch };
     this.emit();
     window.clearTimeout(this.persistTimer);
@@ -55,13 +59,13 @@ export class GameStore {
   async useBackend(b: SaveStore, migrateFrom?: SaveStore) {
     this.pendingFlush();
     this.backend = b; this.save = freshSave(); this.hasSave = false;
-    this.setUI({ loaded: false, screen: 'start', panel: null, selectedId: null, preview: null });
+    this.setUI({ loaded: false, edit: null, screen: 'start', panel: null, selectedId: null, preview: null });
     let d = await b.load();
     if (!d && migrateFrom) {
       const local = await migrateFrom.load();
       if (local) { try { await b.save(local); await migrateFrom.clear(); d = local; } catch { /* se queda local */ } }
     }
-    if (d) { this.save = d; this.hasSave = true; }
+    if (d) { this.save = { ...freshSave(), ...d, zones: d.zones ?? [], inventory: d.inventory ?? {}, placed: d.placed ?? [], style: { floor: 'stock', wall: 'stock', owned: [], ...d.style } }; this.hasSave = true; }
     this.setUI({ loaded: true });
   }
   /** Guarda de inmediato (al cerrar o ocultar la app). */
@@ -76,7 +80,7 @@ export class GameStore {
   // ---- navegación
   startGame(newGame: boolean) {
     if (newGame) { this.save = freshSave(); void this.backend.save(this.save); }
-    this.setUI({ screen: 'game', panel: null, selectedId: null, preview: null });
+    this.setUI({ screen: 'game', edit: null, panel: null, selectedId: null, preview: null });
     this.tick();
   }
   toMenu() { this.hasSave = true; this.setUI({ screen: 'start', panel: null, selectedId: null }); }
@@ -98,7 +102,7 @@ export class GameStore {
   // ---- autos
   freeSlot(): number {
     const used = new Set(this.save.cars.map((c) => c.slot));
-    for (let i = 0; i < this.save.slotsUnlocked; i++) if (!used.has(i)) return i;
+    for (let i = 0; i < TOTAL_SLOTS; i++) if (isSlotUnlocked(this.save, i) && !used.has(i)) return i;
     return -1;
   }
   buyCar(modelId: string): boolean {
@@ -127,7 +131,7 @@ export class GameStore {
     this.toast(`Vendiste el ${m.name} por $${value.toLocaleString('es')}`);
   }
   moveCar(id: string, slot: number) {
-    if (slot < 0 || slot >= this.save.slotsUnlocked) return;
+    if (slot < 0 || slot >= TOTAL_SLOTS || !isSlotUnlocked(this.save, slot)) return;
     const cars = this.save.cars.map((c) => {
       if (c.id === id) return { ...c, slot };
       if (c.slot === slot) return { ...c, slot: this.save.cars.find((x) => x.id === id)!.slot };
@@ -155,6 +159,100 @@ export class GameStore {
     this.setSave({ money: this.save.money - cost, slotsUnlocked: i + 1 });
     this.grant(0, Math.round(cost / 30));
     this.toast('¡Nueva plaza desbloqueada!');
+    return true;
+  }
+
+  /** Compra una zona de expansión física del lote. */
+  buyZone(id: string): boolean {
+    const z = getZone(id);
+    if (hasZone(this.save, id)) return false;
+    if (this.save.level < z.minLevel) { this.toast(`Requiere nivel ${z.minLevel}`, 'bad'); return false; }
+    if (z.requires && !hasZone(this.save, z.requires)) { this.toast(`Primero compra: ${getZone(z.requires).name}`, 'bad'); return false; }
+    if (!this.canAfford(z.cost)) { this.toast('No tienes suficiente dinero', 'bad'); return false; }
+    this.setSave({ money: this.save.money - z.cost, zones: [...(this.save.zones ?? []), id] });
+    this.grant(0, Math.round(z.cost / 30));
+    this.toast(`¡${z.name} desbloqueada!`, 'level');
+    return true;
+  }
+
+
+  // ---- accesorios del taller
+  lastBuy: Record<string, number> = {};
+  private uidSeq = 1;
+  owned(id: string) { return this.save.inventory?.[id] ?? 0; }
+  placedCount(id: string, list: Placed[] = this.save.placed ?? []) { return list.filter((p) => p.item === id).length; }
+  /** unidades libres para colocar (comprados - colocados en el borrador/guardado) */
+  available(id: string) { return this.owned(id) - this.placedCount(id, this.ui.edit?.draft ?? this.save.placed ?? []); }
+  buyItem(id: string): boolean {
+    const it = getItem(id); if (!it) return false;
+    const now = Date.now();
+    if (now - (this.lastBuy[id] ?? 0) < 350) return false; // evita doble toque
+    if (!this.canAfford(it.price)) { this.toast('No tienes suficiente dinero', 'bad'); return false; }
+    this.lastBuy[id] = now;
+    this.setSave({ money: this.save.money - it.price, inventory: { ...(this.save.inventory ?? {}), [id]: this.owned(id) + 1 } });
+    this.grant(0, Math.round(it.price / 60));
+    this.toast(`Compraste: ${it.name}`);
+    return true;
+  }
+  private getDef = (id: string) => getItem(id);
+  private setEdit(patch: Partial<NonNullable<UIState['edit']>>) { if (this.ui.edit) this.setUI({ edit: { ...this.ui.edit, ...patch } }); }
+  enterEdit() { this.setUI({ panel: null, selectedId: null, edit: { draft: [...(this.save.placed ?? [])], sel: null, adding: null, snap: true, dirty: false } }); }
+  editSelect(uid: string | null) { this.setEdit({ sel: uid, adding: null }); }
+  editAdd(itemId: string) {
+    if (!this.ui.edit) this.enterEdit();
+    if (this.available(itemId) <= 0) { this.toast('No tienes unidades libres de ese accesorio', 'bad'); return; }
+    this.setUI({ panel: null, edit: { ...this.ui.edit!, sel: null, adding: itemId } });
+  }
+  editCancelAdd() { this.setEdit({ adding: null }); }
+  editSnap(on: boolean) { this.setEdit({ snap: on }); }
+  /** coloca una unidad nueva del inventario (ya validada por la escena; se revalida aquí) */
+  editPlace(itemId: string, x: number, y: number, rot: Rot): boolean {
+    const e = this.ui.edit, def = getItem(itemId); if (!e || !def) return false;
+    if (this.available(itemId) <= 0) return false;
+    const v = validate(def, x, y, rot, this.save, e.draft, this.getDef);
+    if (!v.ok) { this.toast(v.reason, 'bad'); return false; }
+    const uid = `o${Date.now().toString(36)}${this.uidSeq++}`;
+    this.setUI({ edit: { ...e, draft: [...e.draft, { uid, item: itemId, x: v.x, y: v.y, rot: v.rot }], sel: uid, adding: null, dirty: true } });
+    return true;
+  }
+  editMove(uid: string, x: number, y: number, rot: Rot): boolean {
+    const e = this.ui.edit; if (!e) return false;
+    const cur = e.draft.find((p) => p.uid === uid), def = cur && getItem(cur.item); if (!cur || !def) return false;
+    const v = validate(def, x, y, rot, this.save, e.draft.filter((p) => p.uid !== uid), this.getDef);
+    if (!v.ok) { this.toast(v.reason, 'bad'); return false; }
+    this.setUI({ edit: { ...e, draft: e.draft.map((p) => (p.uid === uid ? { ...p, x: v.x, y: v.y, rot: v.rot } : p)), dirty: true } });
+    return true;
+  }
+  /** devuelve el accesorio al inventario (sin cobro ni reembolso) */
+  editStow(uid: string) {
+    const e = this.ui.edit; if (!e) return;
+    this.setUI({ edit: { ...e, draft: e.draft.filter((p) => p.uid !== uid), sel: null, dirty: true } });
+  }
+  editSave() {
+    const e = this.ui.edit; if (!e) return;
+    const ok: Placed[] = [];
+    for (const p of e.draft) {
+      const def = getItem(p.item); if (!def || ok.filter((o) => o.item === p.item).length >= this.owned(p.item)) continue;
+      if (validate(def, p.x, p.y, p.rot, this.save, ok, this.getDef).ok) ok.push(p);
+    }
+    this.setSave({ placed: ok });
+    this.setUI({ edit: null });
+    this.toast('Cambios del garaje guardados');
+  }
+  editCancel() { this.setUI({ edit: null }); }
+
+  // ---- acabados
+  hasFinish(kind: 'floor' | 'wall', id: string) { const f = findOf(kind, id); return !f.price || (this.save.style?.owned ?? []).includes(`${kind}:${id}`); }
+  setFinish(kind: 'floor' | 'wall', id: string): boolean {
+    const list = kind === 'floor' ? FLOOR_FINISHES : WALL_FINISHES, f = list.find((x) => x.id === id); if (!f) return false;
+    const st = this.save.style ?? {}; const owned = st.owned ?? [];
+    if (!this.hasFinish(kind, id)) {
+      if (this.save.level < f.minLevel) { this.toast(`Requiere nivel ${f.minLevel}`, 'bad'); return false; }
+      if (!this.canAfford(f.price)) { this.toast('No tienes suficiente dinero', 'bad'); return false; }
+      this.setSave({ money: this.save.money - f.price, style: { ...st, [kind]: id, owned: [...owned, `${kind}:${id}`] } });
+      this.toast(`Acabado aplicado: ${f.name}`); return true;
+    }
+    this.setSave({ style: { ...st, [kind]: id, owned } });
     return true;
   }
 
@@ -193,6 +291,10 @@ export class GameStore {
   }
 }
 
+const findOf = (kind: 'floor' | 'wall', id: string) => (kind === 'floor' ? findFloor(id) : findWall(id));
+void ITEMS;
 export const store = new GameStore();
 window.addEventListener('pagehide', () => store.flush());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') store.flush(); });
+// Gancho de pruebas: solo con ?debug en la URL.
+if (typeof location !== 'undefined' && /[?&]debug\b/.test(location.search)) (window as unknown as { __gl: GameStore }).__gl = store;

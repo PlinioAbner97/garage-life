@@ -1,3 +1,6 @@
+import { SLOT_COUNT, zoneOfSlot } from '../data/config';
+
+import type { Placed } from './layout';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export interface OwnedCar { id: string; model: string; paint: string; rim: string; slot: number }
@@ -14,6 +17,14 @@ export interface SaveData {
   totalEarned: number;
   jobsDone: number;
   tutorialDone: boolean;
+  /** zonas de expansión compradas (ids de ZONES); ausente en partidas antiguas */
+  zones?: string[];
+  /** accesorios comprados: id de ITEMS -> cantidad en propiedad (colocados o guardados) */
+  inventory?: Record<string, number>;
+  /** accesorios colocados en el taller (uid único por objeto); mover o guardar nunca vuelve a cobrar */
+  placed?: Placed[];
+  /** acabados: suelo/paredes activos y los comprados ('floor:warm', 'wall:sky') */
+  style?: { floor?: string; wall?: string; owned?: string[] };
   /** marca de tiempo del último guardado (para elegir entre copia local y nube) */
   savedAt?: number;
 }
@@ -22,6 +33,13 @@ export interface SaveData {
  * Interfaz de persistencia. Hoy: localStorage. Mañana: SupabaseSaveStore con la misma interfaz
  * (load/save asíncronos para que cambiar de backend no toque el resto del juego).
  */
+/** ¿La plaza está disponible? Las del garaje original usan slotsUnlocked; las demás dependen de su zona. */
+export function isSlotUnlocked(save: SaveData, i: number): boolean {
+  if (i < SLOT_COUNT) return i < save.slotsUnlocked;
+  const z = zoneOfSlot(i); return !!z && (save.zones ?? []).includes(z.id);
+}
+export const hasZone = (save: SaveData, id: string) => (save.zones ?? []).includes(id);
+
 export interface SaveStore {
   load(): Promise<SaveData | null>;
   save(data: SaveData): Promise<void>;

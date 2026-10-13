@@ -14,12 +14,15 @@ OUT = os.environ.get('OUT', 'out'); os.makedirs(OUT, exist_ok=True)
 top, left, right, bottom = [int(v) for v in os.environ.get('MARGINS', '0,0,0,0').split(',')]
 pct = int(os.environ.get('PCT', '100'))
 name = os.environ.get('NAME', 'garage_bg_ext')
+HIDE = [n for n in os.environ.get('HIDE', '').split(',') if n]   # objetos a ocultar (p. ej. HIDE='Left Wall')
 
 sc = setup(int(os.environ.get('SAMPLES', '96')))
 ecl, sub = car_objects()
 for o in ecl | sub:
     o.hide_render = True
 bpy.data.objects['Circle.001'].hide_render = True
+for n in HIDE:
+    bpy.data.objects[n].hide_render = True; bpy.data.objects[n].hide_viewport = True; print('OCULTO', n, flush=True)
 
 NW, NH = W + left + right, H + top + bottom
 cam = sc.camera
