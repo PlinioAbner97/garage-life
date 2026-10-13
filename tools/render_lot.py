@@ -54,6 +54,38 @@ for o in bpy.data.objects:
     if o.type != 'MESH': continue
     for sl in o.material_slots:
         if sl.material and sl.material.name in MAP: sl.material = MAP[sl.material.name]
+# Paredes como las del garaje original: muro oscuro de 6 m, zocalo metalico, tuberias, viga de techo y columnas azules cada 4.5 m.
+if MODE == 'lot':
+    def gm(name, c, r, m):
+        return pbsdf(name, (*c, 1), r, m)
+    M_STEEL = gm('K_Steel', (0.2, 0.23, 0.27), 0.22, 0.85); M_DARK = gm('K_DarkMetal', (0.03, 0.04, 0.05), 0.28, 0.75)
+    M_BLUE = gm('K_Blue', (0.01, 0.16, 0.42), 0.25, 0.65); M_PIPE = gm('K_Pipes', (0.09, 0.1, 0.11), 0.22, 0.85)
+    def box(name, cx, cy, cz, sx, sy, sz, mat, cyl=False):
+        if cyl: bpy.ops.mesh.primitive_cylinder_add(radius=0.5, depth=1, location=(cx, cy, cz), vertices=16)
+        else: bpy.ops.mesh.primitive_cube_add(size=1, location=(cx, cy, cz))
+        o = bpy.context.object; o.name = name; o.scale = (sx, sy, sz); o.data.materials.append(mat); return o
+    for o in bpy.data.objects:
+        if o.name == 'GL_V8_WALL_BACK': o.location = (0, 20.7, 2.8); o.dimensions = (48, 0.36, 6)
+        if o.name == 'GL_V8_WALL_LEFT': o.location = (-24, 0, 2.8); o.dimensions = (0.36, 42, 6)
+    def kit(axis, face, inward, lo, hi, skip=None):
+        """axis 'y': muro a lo largo de X en y=face (inward = -1: el interior esta hacia -Y). axis 'x': muro a lo largo de Y en x=face."""
+        L = hi - lo; mid = (lo + hi) / 2
+        def P(along, d, z, sa, sd, sz, mat, name, cyl=False):
+            a, dd = (along, face + inward * d)
+            if axis == 'y': return box(name, a, dd, z, sa, sd, sz, mat, cyl)
+            return box(name, dd, a, z, sd, sa, sz, mat, cyl)
+        P(mid, 0.17, 0.85, L, 0.16, 1.6, M_DARK, 'K_Lower')
+        for z in (4.7, 5.0):
+            o = P(mid, 0.37, z, 0.11, 0.11, L, M_PIPE, 'K_Pipe', True)
+            o.rotation_euler = (0, math.pi / 2, 0) if axis == 'y' else (math.pi / 2, 0, 0)
+            o.scale = (0.11, 0.11, L)
+        P(mid, 0.72, 5.8, L, 0.32, 0.36, M_STEEL, 'K_Beam')
+        a = lo + 2.25
+        while a < hi:
+            if not (skip and skip[0] < a < skip[1]): P(a, 0.72, 2.4, 0.44, 0.44, 4.8, M_BLUE, 'K_Col')
+            a += 4.5
+    kit('y', 20.52, -1, -24, 24, skip=(-12.5, 12.5))
+    kit('x', -23.82, 1, -21, 21)
 # corte isometrico: la pared derecha (la mas cercana a la camara) se baja para no tapar el interior
 for o in bpy.data.objects:
     if o.name == 'GL_V8_WALL_RIGHT':

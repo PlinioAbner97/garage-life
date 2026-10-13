@@ -50,5 +50,5 @@ export const BG = { x: -116 + GARAGE_OFFSET[1] * 46.1048 + GARAGE_OFFSET[0] * 59
  * LOT = suelo de las 6 zonas del GL_CARTOWN_GARAGE_V8 + muros (se dibuja bajo garage_bg.png).
  * STREETS = calles y aceras GL_GARAGE_STREETS_V11, renderizadas a la mitad de resolución (scale 2).
  */
-export const LOT = { x: -1490, y: -770, w: 4840, h: 2500 };
+export const LOT = { x: -1490, y: -930, w: 4840, h: 2660 };
 export const STREETS = { x: -2440, y: -950, w: 6750, h: 3120, scale: 2 };

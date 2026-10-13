@@ -20,9 +20,9 @@ export interface WallDef { id: string; rot: Rot; axis: 'x' | 'y'; face: number; 
 /** Muros donde se puede colgar decoración. `face` = coordenada de la cara visible del muro. */
 export const WALLS: WallDef[] = [
   { id: 'garaje-fondo', rot: 0, axis: 'y', face: 6.52 + GY, range: [-12, 12] },
-  { id: 'lote-fondo-izq', rot: 0, axis: 'y', face: 20.875, range: [-24, -12], zones: ['flanco-izquierdo'] },
-  { id: 'lote-fondo-der', rot: 0, axis: 'y', face: 20.875, range: [12, 24], zones: ['flanco-derecho'] },
-  { id: 'lote-izq', rot: 1, axis: 'x', face: -23.875, range: [-21, 21], zones: ['patio-izquierdo', 'frente-izquierdo', 'flanco-izquierdo'] },
+  { id: 'lote-fondo-izq', rot: 0, axis: 'y', face: 20.52, range: [-24, -12], zones: ['flanco-izquierdo'] },
+  { id: 'lote-fondo-der', rot: 0, axis: 'y', face: 20.52, range: [12, 24], zones: ['flanco-derecho'] },
+  { id: 'lote-izq', rot: 1, axis: 'x', face: -23.82, range: [-21, 21], zones: ['patio-izquierdo', 'frente-izquierdo', 'flanco-izquierdo'] },
 ];
 
 export const hasZoneId = (save: Pick<SaveData, 'zones'>, id: string) => (save.zones ?? []).includes(id);
