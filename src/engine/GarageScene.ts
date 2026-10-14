@@ -57,6 +57,7 @@ export class GarageScene extends Phaser.Scene {
   private zoneTexts = new Map<string, Phaser.GameObjects.Text>();
   private zoneCount = -1;
   private ready = false;
+  private visiting = false;
   private styleGfx!: Phaser.GameObjects.Graphics;
   private styleSig = '';
   // modo edición
@@ -183,7 +184,7 @@ export class GarageScene extends Phaser.Scene {
   /** Tap sobre el mundo: autos (pixel-perfect, de adelante hacia atrás) o plazas. */
   private handleTap(p: Phaser.Input.Pointer) {
     const s = store.getSnapshot();
-    if (s.ui.edit) return;
+    if (s.ui.edit || s.ui.visit) return;
     const world = this.cameras.main.getWorldPoint(p.x, p.y);
     const hits = this.input.hitTestPointer(p).filter((o): o is Phaser.GameObjects.Image => o instanceof Phaser.GameObjects.Image && o.getData('carId'));
     hits.sort((a, b) => b.depth - a.depth);
@@ -310,12 +311,31 @@ export class GarageScene extends Phaser.Scene {
     return key;
   }
 
-  private sync(s: Snapshot) {
+  /** Vista de solo lectura del garaje de un amigo: misma escena con sus autos, zonas, accesorios y acabados. */
+  private visitSnap(s: Snapshot): Snapshot {
+    const g = s.ui.visit!.garage;
+    const save: Snapshot['save'] = {
+      v: 1, money: 0, xp: 0, level: g.level, slotsUnlocked: g.slotsUnlocked, nextCarId: 0, jobs: {}, totalEarned: 0, jobsDone: 0, tutorialDone: true,
+      cars: g.cars.map((c, i) => ({ id: `v${i}`, ...c })), zones: g.zones, placed: g.placed, style: g.style,
+    };
+    return { save, ui: { ...s.ui, selectedId: null, edit: null, preview: null, jobs: undefined } as Snapshot['ui'] };
+  }
+
+  private sync(s0: Snapshot) {
+    let s = s0;
     if (!this.ready || s.ui.screen !== 'game') { if (this.ready) this.sprites(false); return; }
+    const visiting = !!s.ui.visit;
+    if (visiting !== this.visiting) {
+      this.visiting = visiting; this.zoneCount = -1; this.styleSig = ''; this.ghostPos = null; this.editDrag = null;
+      for (const v of this.placedViews.values()) v.img?.destroy(); this.placedViews.clear();
+      const cam = this.cameras.main; cam.pan(CX, CY, 400, 'Sine.easeInOut'); cam.zoomTo(this.fitZoom, 400, 'Sine.easeInOut');
+    }
+    if (visiting) s = this.visitSnap(s);
     this.sprites(true);
     this.drawStyle(s);
     this.drawZones(s);
     this.drawSlots(s);
+    if (visiting) { this.slotGfx.clear(); this.slotTexts.forEach((t) => t.setText('')); this.zoneTexts.forEach((t) => t.setText('')); }
     const seen = new Set<string>();
     for (const car of s.save.cars) {
       seen.add(car.id);
@@ -340,7 +360,7 @@ export class GarageScene extends Phaser.Scene {
       const k = SPRITE_SCALE[m.spriteKey];
       v.sprite.setScale(k);
       // escala desde el centro de la plaza en el piso (el auto "se encoge" sin flotar)
-      if (v.slot !== car.slot) { v.sprite.setPosition(c.x + (px - c.x) * k, c.y + (py - c.y) * k); v.slot = car.slot; }
+      if (v.slot !== car.slot || v.model !== car.model) { v.sprite.setPosition(c.x + (px - c.x) * k, c.y + (py - c.y) * k); v.slot = car.slot; v.model = car.model; }
       v.sprite.setDepth(10 + c.y / 10);
       v.bar.setPosition(c.x, c.y - 215); v.icon.setPosition(c.x, c.y - 262); v.tag.setPosition(c.x, c.y + 120);
       v.tag.setText(m.name);
@@ -380,7 +400,7 @@ export class GarageScene extends Phaser.Scene {
   update() {
     // animación del cobro y refresco de timers sin esperar al tick
     const s = store.getSnapshot();
-    if (s.ui.screen === 'game' && this.ready) this.drawOverlays(s);
+    if (s.ui.screen === 'game' && this.ready && !s.ui.visit) this.drawOverlays(s);
   }
 
   /** Acabados: tinte MULTIPLY sobre el suelo y los muros del garaje (debajo de autos y accesorios). */

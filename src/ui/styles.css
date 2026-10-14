@@ -123,3 +123,7 @@ select { font: inherit; padding: 10px; border-radius: 10px; background: var(--pa
 .nav button { flex: none; }
 .editinfo { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(92px + var(--safe-b)); z-index: 4; background: rgba(11,16,32,.9); border: 1px solid var(--accent); border-radius: 14px; padding: 6px 12px; font-size: 13px; max-width: calc(100% - 20px); text-align: center; }
 .nav.editbar button:disabled { opacity: .4; } .nav.editbar .okbtn { background: linear-gradient(180deg, var(--accent), var(--accent2)); color: #251400; }
+/* amigos y visitas */
+.visitbar { position: absolute; left: 50%; transform: translateX(-50%); top: calc(76px + var(--safe-t)); z-index: 6; display: flex; gap: 12px; align-items: center; justify-content: space-between; background: rgba(11,16,32,.94); border: 1px solid var(--accent); border-radius: 16px; padding: 8px 12px; width: min(440px, calc(100% - 20px)); }
+.visitbar div { display: grid; line-height: 1.15; } .visitbar b { font-size: 18px; } .visitbar small { color: var(--muted); }
+.icon.fr { position: relative; } .icon.fr em { position: absolute; top: -4px; right: -4px; background: var(--bad); color: #fff; font-style: normal; border-radius: 10px; min-width: 18px; height: 18px; font-size: 11px; display: grid; place-items: center; }

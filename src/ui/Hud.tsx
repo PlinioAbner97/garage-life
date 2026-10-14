@@ -4,15 +4,18 @@ import { getModel } from '../data/vehicles';
 import { getItem } from '../data/items';
 import { getJob } from '../data/jobs';
 import { bridge } from '../engine/bridge';
+import { social } from '../core/social';
+import { useSocial } from './useSocial';
 import { fmt, fmtTime, useGame } from './hooks';
 
 export function Hud() {
   const { save, ui } = useGame();
   const need = xpForLevel(save.level);
+  const soc = useSocial();
   const car = save.cars.find((c) => c.id === ui.selectedId);
   const job = car ? save.jobs[car.id] : undefined;
   const ready = Object.values(save.jobs).filter((j) => j.done || ui.now >= j.endsAt).length;
-  const open = (p: 'garage' | 'shop' | 'jobs' | 'settings' | 'inventory' | 'expand') => store.openPanel(ui.panel === p ? null : p);
+  const open = (p: 'garage' | 'shop' | 'jobs' | 'settings' | 'inventory' | 'expand' | 'friends') => store.openPanel(ui.panel === p ? null : p);
 
   const customize = () => {
     if (!car) { store.toast('Primero toca un auto para seleccionarlo', 'bad'); return; }
@@ -42,13 +45,21 @@ export function Hud() {
           <button className="icon" title="Acercar" onClick={() => bridge.scene?.zoomBy(1.25)}>＋</button>
           <button className="icon" title="Alejar" onClick={() => bridge.scene?.zoomBy(0.8)}>－</button>
           <button className="icon" title="Vista completa" onClick={() => bridge.scene?.resetView()}>⤢</button>
+          <button className="icon fr" title="Amigos" onClick={() => { void social.refresh(); open('friends'); }}>👥{soc.incoming.length > 0 && <em>{soc.incoming.length}</em>}</button>
           <button className="icon" title="Ajustes" onClick={() => open('settings')}>⚙️</button>
         </div>
       </div>
 
-      {hint && !ui.panel && <div className="hint">{hint}</div>}
+      {ui.visit && (
+        <div className="visitbar">
+          <div><small>Visitando el garaje de</small><b>{ui.visit.username}</b><small>Nivel {ui.visit.garage.level} · {ui.visit.garage.cars.length} autos</small></div>
+          <button className="btn primary" onClick={() => store.leaveVisit()}>↩ Volver al mío</button>
+        </div>
+      )}
 
-      {car && !ui.panel && (
+      {hint && !ui.panel && !ui.visit && <div className="hint">{hint}</div>}
+
+      {car && !ui.panel && !ui.visit && (
         <div className="carcard">
           <div>
             <b>{getModel(car.model).name}</b>
@@ -64,7 +75,7 @@ export function Hud() {
         </div>
       )}
 
-      {ui.edit ? <EditBar /> : (
+      {ui.visit ? null : ui.edit ? <EditBar /> : (
       <nav className="nav">
         <button className={ui.panel === 'garage' ? 'on' : ''} onClick={() => open('garage')}><span>🚗</span>Garaje</button>
         <button className={ui.panel === 'jobs' ? 'on' : ''} onClick={() => open('jobs')}><span>🔧</span>Trabajos{ready > 0 && <em>{ready}</em>}</button>

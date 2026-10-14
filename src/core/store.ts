@@ -1,5 +1,6 @@
 import { START_MONEY, SELL_RATIO, SLOT_COUNT, TOTAL_SLOTS, SLOT_UNLOCK_COST, getZone, xpForLevel } from '../data/config';
 import { ITEMS, getItem, findFloor, findWall, FLOOR_FINISHES, WALL_FINISHES } from '../data/items';
+import { social, type PublicGarage } from './social';
 import { validate, type Placed, type Rot } from './layout';
 import { getModel } from '../data/vehicles';
 import { getJob } from '../data/jobs';
@@ -9,11 +10,13 @@ import { LocalSaveStore, isSlotUnlocked, hasZone, type OwnedCar, type SaveData, 
 export interface Toast { id: number; text: string; kind: 'ok' | 'bad' | 'level' }
 export interface UIState {
   screen: 'start' | 'game';
-  panel: null | 'garage' | 'shop' | 'inventory' | 'expand' | 'style' | 'jobs' | 'customize' | 'settings';
+  panel: null | 'garage' | 'shop' | 'inventory' | 'expand' | 'style' | 'jobs' | 'customize' | 'settings' | 'friends';
   selectedId: string | null;
   /** vista previa de personalización (no guardada) */
   preview: { carId: string; paint: string; rim: string } | null;
   toasts: Toast[];
+  /** visitando el garaje de un amigo (solo lectura) */
+  visit: null | { userId: string; username: string; garage: PublicGarage };
   /** modo "Editar garaje": borrador sin guardar hasta pulsar Guardar cambios */
   edit: null | { draft: Placed[]; sel: string | null; adding: string | null; snap: boolean; dirty: boolean };
   loaded: boolean;
@@ -30,7 +33,7 @@ const freshSave = (): SaveData => ({
 /** Store único: la escena Phaser y la UI React leen y escriben aquí. Sin estado duplicado. */
 export class GameStore {
   private save: SaveData = freshSave();
-  private ui: UIState = { screen: 'start', panel: null, selectedId: null, preview: null, toasts: [], edit: null, loaded: false, now: Date.now() };
+  private ui: UIState = { screen: 'start', panel: null, selectedId: null, preview: null, toasts: [], visit: null, edit: null, loaded: false, now: Date.now() };
   private snap: Snapshot = { save: this.save, ui: this.ui };
   private listeners = new Set<() => void>();
   private toastSeq = 1;
@@ -38,7 +41,7 @@ export class GameStore {
   hasSave = false;
 
   constructor(private backend: SaveStore = new LocalSaveStore()) {}
-  private pendingFlush = () => { if (this.persistTimer) { window.clearTimeout(this.persistTimer); this.persistTimer = undefined; void this.backend.save(this.save); } };
+  private pendingFlush = () => { if (this.persistTimer) { window.clearTimeout(this.persistTimer); this.persistTimer = undefined; void this.backend.save(this.save); social.publish(this.save); } };
 
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; };
   getSnapshot = () => this.snap;
@@ -51,7 +54,7 @@ export class GameStore {
     this.save = { ...this.save, ...patch };
     this.emit();
     window.clearTimeout(this.persistTimer);
-    this.persistTimer = window.setTimeout(() => void this.backend.save(this.save), 250);
+    this.persistTimer = window.setTimeout(() => { void this.backend.save(this.save); social.publish(this.save); }, 250);
   }
   private setUI(patch: Partial<UIState>) { this.ui = { ...this.ui, ...patch }; this.emit(); }
 
@@ -59,7 +62,7 @@ export class GameStore {
   async useBackend(b: SaveStore, migrateFrom?: SaveStore) {
     this.pendingFlush();
     this.backend = b; this.save = freshSave(); this.hasSave = false;
-    this.setUI({ loaded: false, edit: null, screen: 'start', panel: null, selectedId: null, preview: null });
+    this.setUI({ loaded: false, visit: null, edit: null, screen: 'start', panel: null, selectedId: null, preview: null });
     let d = await b.load();
     if (!d && migrateFrom) {
       const local = await migrateFrom.load();
@@ -76,6 +79,15 @@ export class GameStore {
     this.setUI({ toasts: [...this.ui.toasts, t].slice(-4) });
     window.setTimeout(() => this.setUI({ toasts: this.ui.toasts.filter((x) => x.id !== t.id) }), 3200);
   }
+
+  // ---- visitas a garajes de amigos
+  async visit(userId: string, username: string): Promise<boolean> {
+    const garage = await social.fetchGarage(userId);
+    if (!garage) { this.toast(`${username} aún no ha abierto su garaje`, 'bad'); return false; }
+    this.setUI({ visit: { userId, username, garage }, panel: null, edit: null, selectedId: null, preview: null });
+    return true;
+  }
+  leaveVisit() { this.setUI({ visit: null }); }
 
   // ---- navegación
   startGame(newGame: boolean) {

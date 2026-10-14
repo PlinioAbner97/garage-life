@@ -10,6 +10,8 @@ import { PAINTS, RIMS, findPaint, findRim, type ColorPart } from '../data/parts'
 import { bridge } from '../engine/bridge';
 import { ITEMS, CATEGORIES, FLOOR_FINISHES, WALL_FINISHES, getItem, type ItemDef, type ItemCategory } from '../data/items';
 import { itemUrl } from '../data/itemAssets';
+import { social, USERNAME_RE } from '../core/social';
+import { useSocial } from './useSocial';
 import { fmt, fmtTime, useGame } from './hooks';
 
 function Sheet({ title, onClose, children, side }: { title: string; onClose: () => void; children: ReactNode; side?: boolean }) {
@@ -29,6 +31,7 @@ export function Panels() {
     case 'shop': return <Sheet title="Tienda" onClose={close}><ShopPanel /></Sheet>;
     case 'inventory': return <Sheet title="Inventario" onClose={close}><InventoryPanel /></Sheet>;
     case 'expand': return <Sheet title="Expansiones del terreno" onClose={close}><ExpandPanel /></Sheet>;
+    case 'friends': return <Sheet title="Amigos" onClose={close}><FriendsPanel /></Sheet>;
     case 'jobs': return <Sheet title="Trabajos del taller" onClose={close}><JobsPanel /></Sheet>;
     case 'customize': return <Sheet title="Personalizar" side onClose={() => { store.setPreview(null); close(); }}><CustomizePanel /></Sheet>;
     case 'settings': return <Sheet title="Ajustes" onClose={close}><SettingsPanel /></Sheet>;
@@ -242,6 +245,58 @@ function CarShop() {
         </div>
       </div>
       <p className="muted">La pintura y los rines se compran en <b>🎨 Estilo</b>.</p>
+    </>
+  );
+}
+
+function FriendsPanel() {
+  const a = useAuth(); const so = useSocial(); const { save } = useGame();
+  const [name, setName] = useState(''); const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  if (!a.email) return <p className="muted">Para tener nombre de usuario, añadir amigos y visitar sus garajes necesitas una <b>cuenta</b>. Vuelve al menú desde ⚙️ y crea una cuenta con tu correo: tu garaje actual se conserva.</p>;
+  if (!so.loaded) return <p className="muted">Cargando…</p>;
+  if (!so.me) {
+    const ok = USERNAME_RE.test(name.trim());
+    return (
+      <form className="authform" onSubmit={async (e) => { e.preventDefault(); if (await social.setUsername(name, save.level)) social.publish(store.getSnapshot().save); }}>
+        <p className="muted">Elige tu <b>nombre de usuario</b>. Tus amigos te encontrarán con él y podrán visitar tu garaje.</p>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. Plinio_97" maxLength={16} autoCapitalize="off" autoCorrect="off" spellCheck={false} aria-label="Nombre de usuario" />
+        <small className="muted">3 a 16 caracteres: letras, números o _</small>
+        {so.error && <div className="autherr">{so.error}</div>}
+        <button className="btn primary" disabled={!ok || so.busy}>{so.busy ? 'Guardando…' : 'Guardar nombre'}</button>
+      </form>
+    );
+  }
+  const go = async (userId: string, username: string) => { setBusy(true); await store.visit(userId, username); setBusy(false); };
+  return (
+    <>
+      <p className="muted">Eres <b>@{so.me.username}</b> · nivel {save.level}</p>
+      <form className="row" style={{ gap: 8 }} onSubmit={async (e) => { e.preventDefault(); setMsg(await social.addFriend(name)); setName(''); }}>
+        <input className="grow" style={{ font: 'inherit', fontSize: 16, padding: '10px 12px', borderRadius: 12, border: '1px solid var(--line)', background: 'var(--panel2)', color: 'var(--text)' }} value={name} onChange={(e) => setName(e.target.value)} placeholder="Añadir amigo por nombre de usuario" autoCapitalize="off" autoCorrect="off" spellCheck={false} aria-label="Usuario del amigo" />
+        <button className="btn primary" disabled={!name.trim()}>Añadir</button>
+      </form>
+      {(msg || so.error) && <p className="muted">{so.error ?? msg}</p>}
+      {so.incoming.length > 0 && (<>
+        <h3>Solicitudes</h3>
+        <div className="list">{so.incoming.map((r) => (
+          <div key={r.friendshipId} className="card"><div className="grow"><b>@{r.profile.username}</b><small>Nivel {r.profile.level} quiere ser tu amigo</small></div>
+            <div className="col"><button className="btn primary" onClick={() => void social.respond(r.friendshipId, true)}>Aceptar</button><button className="btn ghost" onClick={() => void social.respond(r.friendshipId, false)}>Rechazar</button></div></div>
+        ))}</div>
+      </>)}
+      <h3>Mis amigos ({so.friends.length})</h3>
+      {so.friends.length === 0 && <p className="muted">Aún no tienes amigos. Escribe arriba el nombre de usuario de alguien para invitarlo.</p>}
+      <div className="list">{so.friends.map((f) => (
+        <div key={f.friendshipId} className="card"><div className="grow"><b>@{f.profile.username}</b><small>Nivel {f.profile.level}</small></div>
+          <div className="col"><button className="btn primary" disabled={busy} onClick={() => void go(f.profile.id, f.profile.username)}>🏠 Visitar</button>
+            <button className="btn ghost danger" onClick={() => { if (confirm(`¿Quitar a @${f.profile.username} de tus amigos?`)) void social.remove(f.friendshipId); }}>Quitar</button></div></div>
+      ))}</div>
+      {so.outgoing.length > 0 && (<>
+        <h3>Enviadas</h3>
+        <div className="list">{so.outgoing.map((r) => (
+          <div key={r.friendshipId} className="card"><div className="grow"><b>@{r.profile.username}</b><small>Esperando respuesta</small></div>
+            <div className="col"><button className="btn ghost" onClick={() => void social.remove(r.friendshipId)}>Cancelar</button></div></div>
+        ))}</div>
+      </>)}
     </>
   );
 }

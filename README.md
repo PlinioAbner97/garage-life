@@ -71,3 +71,9 @@ Al crear cuenta, si ya había una partida local en ese dispositivo se sube a la 
 - **Persistencia**: `zones`, `inventory`, `placed`, `style` dentro de la partida (local o Supabase). Partidas antiguas se migran con valores vacíos.
 - **Renders**: `tools/render_lot.py` (terreno y calles V11), `tools/render_items.py` (sprites de accesorios, 4 rotaciones) con la cámara del juego.
 - **Limitaciones**: no hay backend propio, así que las compras se validan en el cliente (la partida vive en el navegador/Supabase con RLS por usuario; un jugador técnico podría alterar su propia partida). Los artículos marcados "decorativo" aún no tienen función de juego. Depuración: añadir `?debug` a la URL expone `window.__gl`.
+
+## Usuarios, amigos y visitas
+- Con cuenta, el jugador elige un **username** (3–16 letras, números o `_`, único), añade amigos por username (solicitud → aceptar) y **visita sus garajes** en solo lectura (👥 arriba a la derecha).
+- Los amigos ven una copia reducida (`garages`: autos, zonas, accesorios, acabados y nivel; **sin dinero ni datos privados**). Se publica sola unos segundos después de cada guardado.
+- **Requiere ejecutar `supabase/schema_social.sql`** en Supabase → SQL Editor (tablas `profiles`, `friendships`, `garages` con RLS: solo el amigo aceptado puede leer tu garaje).
+- Próximo paso previsto: carreras entre amigos y contra IA (dinero y XP). Cuando se haga, el premio debería validarse en el servidor (función de Supabase), no en el cliente.

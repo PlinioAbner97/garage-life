@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { store } from './store';
+import { social } from './social';
 import { CloudSaveStore, LocalSaveStore } from './save';
 
 export interface AuthState {
@@ -51,6 +52,8 @@ class Auth {
     this.userId = s.user.id;
     this.set({ email: s.user.email ?? null, guest: false, error: null, info: null });
     await store.useBackend(new CloudSaveStore(supabase, s.user.id), local);
+    await social.setUser(s.user.id);
+    social.publish(store.getSnapshot().save);
   }
 
   async signIn(email: string, password: string) {
@@ -72,6 +75,7 @@ class Auth {
     store.flush();
     if (supabase) await supabase.auth.signOut();
     this.userId = null; this.set({ email: null, guest: false });
+    void social.setUser(null);
     await store.useBackend(local); // vacía el estado en memoria; la pantalla de inicio pedirá cuenta de nuevo
     store.hasSave = false;
   }
