@@ -71,7 +71,8 @@ export class GarageScene extends Phaser.Scene {
 
   preload() {
     this.load.image('bg', ASSETS.bg);
-    this.load.image('lot', ASSETS.lot);
+    this.load.image('lot-a', ASSETS.lotA);
+    this.load.image('lot-b', ASSETS.lotB);
     this.load.image('streets', ASSETS.streets);
     ITEMS.forEach((it) => [0, 1, 2, 3].forEach((r) => { const u = itemUrl(it.id, r); if (u) this.load.image(`item:${it.id}:${r}`, u); }));
     SPRITE_KEYS.forEach((k) => {
@@ -89,7 +90,8 @@ export class GarageScene extends Phaser.Scene {
       );
     });
     this.add.image(STREETS.x, STREETS.y, 'streets').setOrigin(0).setScale(STREETS.scale).setDepth(-3);
-    this.add.image(LOT.x, LOT.y, 'lot').setOrigin(0).setDepth(-2);
+    this.add.image(LOT.x, LOT.y, 'lot-a').setOrigin(0).setDepth(-2);
+    this.add.image(LOT.x + LOT.w / 2, LOT.y, 'lot-b').setOrigin(0).setDepth(-2);
     this.add.image(BG.x, BG.y, 'bg').setOrigin(0).setDepth(0);
     this.styleGfx = this.add.graphics().setDepth(0.3).setBlendMode(Phaser.BlendModes.MULTIPLY);
     this.zoneGfx = this.add.graphics().setDepth(0.5);
@@ -119,7 +121,14 @@ export class GarageScene extends Phaser.Scene {
     this.fitZoom = z;
     this.lotFit = Math.min(this.scale.width / LOT.w, this.scale.height / LOT.h) * 0.98;
     this.minZoom = this.lotFit * 0.8;
-    if (!onlyIfFitted || wasFitted) { cam.setZoom(z); cam.centerOn(CX, CY); }
+    if (!onlyIfFitted || wasFitted) {
+      // en pantalla vertical sobra espacio bajo el garaje: se sube el garaje y se muestra el terreno de abajo
+      const portrait = this.scale.height > this.scale.width * 1.2;
+      // límites con holgura vertical: en pantallas altas el mundo es más bajo que la vista y la cámara quedaría fija
+      const padY = Math.max(100, this.scale.height / this.minZoom * 0.5);
+      cam.setBounds(STREETS.x - 100, STREETS.y - padY, STREETS.w + 200, STREETS.h + padY * 2);
+      cam.setZoom(z); cam.centerOn(CX, CY + (portrait ? (this.scale.height / z) * 0.24 : 0));
+    }
   }
   focusOn(x: number, y: number, zoom = Math.max(this.fitZoom * 1.7, dpr())) {
     const cam = this.cameras.main;
@@ -130,7 +139,7 @@ export class GarageScene extends Phaser.Scene {
     const cam = this.cameras.main;
     if (Math.abs(cam.zoom - this.fitZoom) < 0.01 * this.fitZoom && this.lotFit < this.fitZoom * 0.9) {
       cam.pan(LOT.x + LOT.w / 2, LOT.y + LOT.h / 2, 500, 'Sine.easeInOut'); cam.zoomTo(this.lotFit, 500, 'Sine.easeInOut');
-    } else { cam.pan(CX, CY, 400, 'Sine.easeInOut'); cam.zoomTo(this.fitZoom, 400, 'Sine.easeInOut'); }
+    } else { cam.pan(CX, CY + (this.scale.height > this.scale.width * 1.2 ? (this.scale.height / this.fitZoom) * 0.24 : 0), 400, 'Sine.easeInOut'); cam.zoomTo(this.fitZoom, 400, 'Sine.easeInOut'); }
   }
   zoomBy(f: number) {
     const cam = this.cameras.main;

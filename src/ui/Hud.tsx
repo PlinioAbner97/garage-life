@@ -71,8 +71,8 @@ export function Hud() {
         <button className={ui.panel === 'customize' ? 'on' : ''} onClick={customize}><span>🎨</span>Estilo</button>
         <button className={ui.panel === 'shop' ? 'on' : ''} onClick={() => open('shop')}><span>🛒</span>Tienda</button>
         <button className={ui.panel === 'inventory' ? 'on' : ''} onClick={() => open('inventory')}><span>📦</span>Inventario</button>
-        <button onClick={() => store.enterEdit()}><span>🛠️</span>Editar garaje</button>
-        <button className={ui.panel === 'expand' ? 'on' : ''} onClick={() => open('expand')}><span>🗺️</span>Expansiones</button>
+        <button onClick={() => store.enterEdit()}><span>🛠️</span>Editar</button>
+        <button className={ui.panel === 'expand' ? 'on' : ''} onClick={() => open('expand')}><span>🗺️</span>Zonas</button>
       </nav>)}
     </>
   );
@@ -88,10 +88,10 @@ function EditBar() {
       <nav className="nav editbar">
         <button onClick={() => store.openPanel(ui.panel === 'inventory' ? null : 'inventory')}><span>📦</span>Inventario</button>
         <button disabled={!def} onClick={() => bridge.scene?.editRotate()}><span>⟳</span>Rotar</button>
-        <button disabled={!cur} onClick={() => cur && store.editStow(cur.uid)}><span>↩️</span>Guardar en inv.</button>
-        <button className={e.snap ? 'on' : ''} onClick={() => store.editSnap(!e.snap)}><span>▦</span>Cuadrícula</button>
+        <button title="Guardar en el inventario" disabled={!cur} onClick={() => cur && store.editStow(cur.uid)}><span>↩️</span>Quitar</button>
+        <button className={e.snap ? 'on' : ''} onClick={() => store.editSnap(!e.snap)}><span>▦</span>Rejilla</button>
         <button onClick={() => store.editCancel()}><span>✖️</span>Cancelar</button>
-        <button className="okbtn" onClick={() => store.editSave()}><span>✔️</span>Guardar cambios</button>
+        <button title="Guardar cambios" className="okbtn" onClick={() => store.editSave()}><span>✔️</span>Guardar</button>
       </nav>
     </>
   );

@@ -1,6 +1,7 @@
 import bg from '../assets/garage_bg.png';
 import { GARAGE_OFFSET } from '../data/config';
-import lot from '../assets/lot.webp';
+import lotA from '../assets/lot_a.webp';
+import lotB from '../assets/lot_b.webp';
 import streets from '../assets/streets.webp';
 import eclBeauty from '../assets/ecl_beauty.png';
 import eclMask from '../assets/ecl_mask.png';
@@ -17,8 +18,8 @@ import type { SpriteKey } from '../data/vehicles';
 
 export const SPRITE_KEYS: SpriteKey[] = ['ecl', 'sub', 'sup', 'r34', 'evo'];
 
-export const ASSETS: { bg: string; lot: string; streets: string } & Record<SpriteKey, { beauty: string; mask: string }> = {
-  bg, lot, streets,
+export const ASSETS: { bg: string; lotA: string; lotB: string; streets: string } & Record<SpriteKey, { beauty: string; mask: string }> = {
+  bg, lotA, lotB, streets,
   ecl: { beauty: eclBeauty, mask: eclMask },
   sub: { beauty: subBeauty, mask: subMask },
   sup: { beauty: supBeauty, mask: supMask },
@@ -47,7 +48,7 @@ export const BG = { x: -116 + GARAGE_OFFSET[1] * 46.1048 + GARAGE_OFFSET[0] * 59
 
 /**
  * Capas del lote (tools/render_lot.py, misma cámara que el garaje: los píxeles coinciden). Rectángulos en px de mundo.
- * LOT = suelo de las 6 zonas del GL_CARTOWN_GARAGE_V8 + muros (se dibuja bajo garage_bg.png).
+ * LOT (en dos mitades de 2420 px: las GPU de moviles antiguos limitan las texturas a 4096 px) = suelo de las 6 zonas del GL_CARTOWN_GARAGE_V8 + muros (se dibuja bajo garage_bg.png).
  * STREETS = calles y aceras GL_GARAGE_STREETS_V11, renderizadas a la mitad de resolución (scale 2).
  */
 export const LOT = { x: -1490, y: -930, w: 4840, h: 2660 };
