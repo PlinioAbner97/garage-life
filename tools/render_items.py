@@ -56,6 +56,9 @@ for nm, e, loc, rot, sx, sy, col in [('A', 1100, (-10, -3, 4), (0.4, 0, -0.4), 5
 sc.world.use_nodes = True
 bg = sc.world.node_tree.nodes['Background']; bg.inputs[0].default_value = (0.008, 0.012, 0.018, 1); bg.inputs[1].default_value = 0.2
 keep_lights = [o for o in bpy.data.objects if o.type == 'LIGHT']
+EXTRA_WALL = set()
+if os.environ.get('EXTRA'): exec(open(os.environ['EXTRA']).read())   # accesorios adicionales (p. ej. tools/jdm_items.py)
+
 def objs(col): return [o for o in bpy.data.collections[col].all_objects if o]
 shop_cols = [c.name for c in bpy.data.collections if c.name.startswith('SHOP_')]
 for o in bpy.data.objects:
@@ -76,7 +79,7 @@ for cname in shop_cols:
     for o in ms: o.hide_render = False; o.hide_viewport = False
     bpy.context.view_layer.update()
     mn, mx = bbox(ms); cx, cy = (mn.x + mx.x) / 2, (mn.y + mx.y) / 2
-    wall = cname in ('SHOP_07_NEON_SIGN', 'SHOP_08_TOOL_WALL')
+    wall = cname in ('SHOP_07_NEON_SIGN', 'SHOP_08_TOOL_WALL') or cname in EXTRA_WALL
     piv = bpy.data.objects.new('PIV', None); bpy.context.scene.collection.objects.link(piv); piv.location = (cx, cy, 0)
     bpy.context.view_layer.update()
     for o in ms:
