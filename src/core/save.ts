@@ -1,6 +1,7 @@
 import { SLOT_COUNT, zoneOfSlot } from '../data/config';
 
 import type { Placed } from './layout';
+import type { BizState } from '../data/clients';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export interface OwnedCar { id: string; model: string; paint: string; rim: string; slot: number }
@@ -25,6 +26,8 @@ export interface SaveData {
   placed?: Placed[];
   /** acabados: suelo/paredes activos y los comprados ('floor:warm', 'wall:sky') */
   style?: { floor?: string; wall?: string; owned?: string[] };
+  /** negocio de clientes: reputación, trabajos de clientes (con sus autos temporales) y llegada de solicitudes */
+  biz?: BizState;
   /** marca de tiempo del último guardado (para elegir entre copia local y nube) */
   savedAt?: number;
 }

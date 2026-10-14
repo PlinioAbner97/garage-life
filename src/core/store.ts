@@ -1,5 +1,7 @@
 import { START_MONEY, SELL_RATIO, SLOT_COUNT, TOTAL_SLOTS, SLOT_UNLOCK_COST, getZone, xpForLevel } from '../data/config';
 import { ITEMS, getItem, findFloor, findWall, FLOOR_FINISHES, WALL_FINISHES } from '../data/items';
+import { CLIENT_JOBS, CLIENT_CARS_BY_REP, CLIENT_NAMES, ARRIVE_MS, LEAVE_MS, OFFER_EVERY_MS, OFFER_TTL_MS, freshBiz, getClientJob, maxOffers, repLevel, repPayMult, type BizState, type ClientJob } from '../data/clients';
+import { PAINTS } from '../data/parts';
 import { social, type PublicGarage } from './social';
 import { validate, type Placed, type Rot } from './layout';
 import { getModel } from '../data/vehicles';
@@ -11,6 +13,8 @@ export interface Toast { id: number; text: string; kind: 'ok' | 'bad' | 'level' 
 export interface UIState {
   screen: 'start' | 'game';
   panel: null | 'garage' | 'shop' | 'inventory' | 'expand' | 'style' | 'jobs' | 'customize' | 'settings' | 'friends';
+  /** pestaña del menú Trabajos */
+  jobsTab: 'mine' | 'clients';
   selectedId: string | null;
   /** vista previa de personalización (no guardada) */
   preview: { carId: string; paint: string; rim: string } | null;
@@ -27,13 +31,13 @@ export interface Snapshot { save: SaveData; ui: UIState }
 const freshSave = (): SaveData => ({
   v: 1, money: START_MONEY, xp: 0, level: 1,
   cars: [{ id: 'c1', model: 'falcon-gt', paint: 'stock', rim: 'stock', slot: 0 }],
-  slotsUnlocked: 2, nextCarId: 2, jobs: {}, totalEarned: 0, jobsDone: 0, tutorialDone: false, zones: [], inventory: {}, placed: [], style: { floor: 'stock', wall: 'stock', owned: [] },
+  slotsUnlocked: 2, nextCarId: 2, jobs: {}, totalEarned: 0, jobsDone: 0, tutorialDone: false, zones: [], inventory: {}, placed: [], style: { floor: 'stock', wall: 'stock', owned: [] }, biz: freshBiz(),
 });
 
 /** Store único: la escena Phaser y la UI React leen y escriben aquí. Sin estado duplicado. */
 export class GameStore {
   private save: SaveData = freshSave();
-  private ui: UIState = { screen: 'start', panel: null, selectedId: null, preview: null, toasts: [], visit: null, edit: null, loaded: false, now: Date.now() };
+  private ui: UIState = { screen: 'start', panel: null, selectedId: null, preview: null, toasts: [], jobsTab: 'mine', visit: null, edit: null, loaded: false, now: Date.now() };
   private snap: Snapshot = { save: this.save, ui: this.ui };
   private listeners = new Set<() => void>();
   private toastSeq = 1;
@@ -68,7 +72,7 @@ export class GameStore {
       const local = await migrateFrom.load();
       if (local) { try { await b.save(local); await migrateFrom.clear(); d = local; } catch { /* se queda local */ } }
     }
-    if (d) { this.save = { ...freshSave(), ...d, zones: d.zones ?? [], inventory: d.inventory ?? {}, placed: d.placed ?? [], style: { floor: 'stock', wall: 'stock', owned: [], ...d.style } }; this.hasSave = true; }
+    if (d) { this.save = { ...freshSave(), ...d, zones: d.zones ?? [], inventory: d.inventory ?? {}, placed: d.placed ?? [], style: { floor: 'stock', wall: 'stock', owned: [], ...d.style }, biz: { ...freshBiz(), ...d.biz } }; this.hasSave = true; }
     this.setUI({ loaded: true });
   }
   /** Guarda de inmediato (al cerrar o ocultar la app). */
@@ -114,7 +118,8 @@ export class GameStore {
   // ---- autos
   freeSlot(): number {
     const used = new Set(this.save.cars.map((c) => c.slot));
-    for (let i = 0; i < TOTAL_SLOTS; i++) if (isSlotUnlocked(this.save, i) && !used.has(i)) return i;
+    const bays = this.baySlots();
+    for (let i = 0; i < TOTAL_SLOTS; i++) if (isSlotUnlocked(this.save, i) && !used.has(i) && !bays.has(i)) return i;
     return -1;
   }
   buyCar(modelId: string): boolean {
@@ -144,6 +149,7 @@ export class GameStore {
   }
   moveCar(id: string, slot: number) {
     if (slot < 0 || slot >= TOTAL_SLOTS || !isSlotUnlocked(this.save, slot)) return;
+    if (this.baySlots().has(slot)) { this.toast('Esa plaza es una Bahía de Servicio. Retírala en Editar garaje para usarla.', 'bad'); return; }
     const cars = this.save.cars.map((c) => {
       if (c.id === id) return { ...c, slot };
       if (c.slot === slot) return { ...c, slot: this.save.cars.find((x) => x.id === id)!.slot };
@@ -199,6 +205,7 @@ export class GameStore {
     const it = getItem(id); if (!it) return false;
     const now = Date.now();
     if (now - (this.lastBuy[id] ?? 0) < 350) return false; // evita doble toque
+    if (it.minLevel && this.save.level < it.minLevel) { this.toast(`Requiere nivel ${it.minLevel}`, 'bad'); return false; }
     if (!this.canAfford(it.price)) { this.toast('No tienes suficiente dinero', 'bad'); return false; }
     this.lastBuy[id] = now;
     this.setSave({ money: this.save.money - it.price, inventory: { ...(this.save.inventory ?? {}), [id]: this.owned(id) + 1 } });
@@ -224,30 +231,36 @@ export class GameStore {
     const v = validate(def, x, y, rot, this.save, e.draft, this.getDef);
     if (!v.ok) { this.toast(v.reason, 'bad'); return false; }
     const uid = `o${Date.now().toString(36)}${this.uidSeq++}`;
-    this.setUI({ edit: { ...e, draft: [...e.draft, { uid, item: itemId, x: v.x, y: v.y, rot: v.rot }], sel: uid, adding: null, dirty: true } });
+    this.setUI({ edit: { ...e, draft: [...e.draft, { uid, item: itemId, x: v.x, y: v.y, rot: v.rot, ...(v.slot !== undefined ? { slot: v.slot } : {}) }], sel: uid, adding: null, dirty: true } });
     return true;
   }
   editMove(uid: string, x: number, y: number, rot: Rot): boolean {
     const e = this.ui.edit; if (!e) return false;
     const cur = e.draft.find((p) => p.uid === uid), def = cur && getItem(cur.item); if (!cur || !def) return false;
+    if (this.bayLocked(uid)) { this.toast('Esa bahía tiene un trabajo activo. Termínalo para moverla.', 'bad'); return false; }
     const v = validate(def, x, y, rot, this.save, e.draft.filter((p) => p.uid !== uid), this.getDef);
     if (!v.ok) { this.toast(v.reason, 'bad'); return false; }
-    this.setUI({ edit: { ...e, draft: e.draft.map((p) => (p.uid === uid ? { ...p, x: v.x, y: v.y, rot: v.rot } : p)), dirty: true } });
+    this.setUI({ edit: { ...e, draft: e.draft.map((p) => (p.uid === uid ? { ...p, x: v.x, y: v.y, rot: v.rot, ...(v.slot !== undefined ? { slot: v.slot } : {}) } : p)), dirty: true } });
     return true;
   }
   /** devuelve el accesorio al inventario (sin cobro ni reembolso) */
   editStow(uid: string) {
     const e = this.ui.edit; if (!e) return;
+    if (this.bayLocked(uid)) { this.toast('Esa bahía tiene un trabajo activo. Termínalo para retirarla.', 'bad'); return; }
     this.setUI({ edit: { ...e, draft: e.draft.filter((p) => p.uid !== uid), sel: null, dirty: true } });
   }
   editSave() {
     const e = this.ui.edit; if (!e) return;
     const ok: Placed[] = [];
-    for (const p of e.draft) {
+    // una bahía con trabajo activo nunca desaparece, aunque el borrador la haya quitado
+    const keep = (this.save.placed ?? []).filter((p) => this.bayLocked(p.uid) && !e.draft.some((d) => d.uid === p.uid));
+    for (const p of [...e.draft, ...keep]) {
       const def = getItem(p.item); if (!def || ok.filter((o) => o.item === p.item).length >= this.owned(p.item)) continue;
       if (validate(def, p.x, p.y, p.rot, this.save, ok, this.getDef).ok) ok.push(p);
     }
+    const hadRec = this.hasEquip('reception');
     this.setSave({ placed: ok });
+    if (!hadRec && this.hasEquip('reception') && !(this.save.biz?.nextOfferAt)) this.setSave({ biz: { ...(this.save.biz ?? freshBiz()), nextOfferAt: Date.now() + 4000 } });
     this.setUI({ edit: null });
     this.toast('Cambios del garaje guardados');
   }
@@ -266,6 +279,93 @@ export class GameStore {
     }
     this.setSave({ style: { ...st, [kind]: id, owned } });
     return true;
+  }
+
+
+  // ---- negocio de clientes (Recepción + Bahías de Servicio)
+  private getBiz(): BizState { return this.save.biz ?? freshBiz(); }
+  private setBiz(patch: Partial<BizState>) { this.setSave({ biz: { ...this.getBiz(), ...patch } }); }
+  private patchJob(id: string, patch: Partial<ClientJob>) { this.setBiz({ jobs: this.getBiz().jobs.map((j) => (j.id === id ? { ...j, ...patch } : j)) }); }
+  /** equipo instalado y guardado en el taller (no cuenta el borrador del editor) */
+  hasEquip(itemId: string) { return (this.save.placed ?? []).some((p) => p.item === itemId); }
+  bays(): Placed[] { return (this.save.placed ?? []).filter((p) => getItem(p.item)?.special === 'bay'); }
+  /** plazas reservadas por una Bahía de Servicio instalada */
+  baySlots(): Set<number> { return new Set(this.bays().map((b) => b.slot).filter((n): n is number => n !== undefined)); }
+  private bayJob(uid: string) { return this.getBiz().jobs.find((j) => j.bay === uid && j.state !== 'offered'); }
+  bayLocked(uid: string) { return !!this.bayJob(uid); }
+  freeBays(): Placed[] { return this.bays().filter((b) => !this.bayJob(b.uid)); }
+  repLevel() { return repLevel(this.getBiz().rep); }
+  /** ¿Por qué no se puede aceptar? ('' = se puede) */
+  cantAccept(j: ClientJob): string {
+    const def = getClientJob(j.jobId);
+    if (!this.hasEquip('reception')) return 'Necesitas la Recepción instalada';
+    if (this.repLevel() < def.minRep) return 'Requiere más reputación';
+    if (def.needs && !this.hasEquip(def.needs)) return `Requiere: ${getItem(def.needs)?.name ?? def.needs}`;
+    if (this.freeBays().length === 0) return this.bays().length ? 'Todas tus bahías están ocupadas' : 'Necesitas una Bahía de Servicio';
+    return '';
+  }
+  acceptClient(id: string): boolean {
+    const j = this.getBiz().jobs.find((x) => x.id === id);
+    if (!j || j.state !== 'offered') return false;
+    const why = this.cantAccept(j); if (why) { this.toast(why, 'bad'); return false; }
+    const bay = this.freeBays()[0];
+    this.patchJob(id, { state: 'arriving', bay: bay.uid, acceptedAt: Date.now() });
+    this.toast(`${j.client} viene hacia tu taller`);
+    return true;
+  }
+  startRepair(id: string): boolean {
+    const j = this.getBiz().jobs.find((x) => x.id === id);
+    if (!j || j.state !== 'waiting') return false;
+    const now = Date.now();
+    this.patchJob(id, { state: 'repairing', startedAt: now, endsAt: now + j.seconds * 1000 });
+    return true;
+  }
+  /** Cobra un trabajo terminado. El indicador `claimed` se guarda en la misma operación: no se puede cobrar dos veces. */
+  claimClient(id: string): boolean {
+    const j = this.getBiz().jobs.find((x) => x.id === id);
+    if (!j || j.state !== 'ready' || j.claimed) return false;
+    const b = this.getBiz();
+    this.setBiz({ jobs: b.jobs.map((x) => (x.id === id ? { ...x, claimed: true, state: 'leaving', leaveAt: Date.now() } : x)), done: b.done + 1, rep: b.rep + getClientJob(j.jobId).repPts });
+    const before = repLevel(b.rep), after = repLevel(b.rep + getClientJob(j.jobId).repPts);
+    this.grant(j.pay, j.xp);
+    this.toast(`${getClientJob(j.jobId).icon} ${j.client}: +$${j.pay.toLocaleString('es')}  +${j.xp} XP`);
+    if (after > before) this.toast(`¡Tu taller subió de reputación!`, 'level');
+    return true;
+  }
+  setJobsTab(t: 'mine' | 'clients') { this.setUI({ jobsTab: t }); }
+  private makeOffer(now: number): ClientJob {
+    const b = this.getBiz(), rep = repLevel(b.rep);
+    const pool = CLIENT_JOBS.filter((d) => d.minRep <= rep);
+    const def = pool[Math.floor(Math.random() * pool.length)];
+    const cars = CLIENT_CARS_BY_REP[rep - 1] ?? ['falcon-gt'];
+    const paints = PAINTS.filter((p) => p.minLevel <= 2);
+    const jit = 0.92 + Math.random() * 0.16;
+    return {
+      id: `k${b.nextId}`, client: CLIENT_NAMES[Math.floor(Math.random() * CLIENT_NAMES.length)], model: cars[Math.floor(Math.random() * cars.length)],
+      paint: paints[Math.floor(Math.random() * paints.length)].id, rim: 'stock', jobId: def.id,
+      pay: Math.round((def.pay * repPayMult(rep) * jit) / 10) * 10, xp: def.xp, seconds: def.seconds, state: 'offered', offeredAt: now,
+    };
+  }
+  /** Avanza el negocio con el reloj: llegada, listo, salida, expiración y nuevas solicitudes. Todo basado en marcas de tiempo (seguro al recargar). */
+  private tickBiz(now: number) {
+    const b = this.getBiz(); let jobs = b.jobs; let changed = false; let next = b.nextOfferAt; let nextId = b.nextId;
+    const upd = (fn: (j: ClientJob) => ClientJob | null) => { const out: ClientJob[] = []; for (const j of jobs) { const r = fn(j); if (r !== j) changed = true; if (r) out.push(r); } jobs = out; };
+    upd((j) => {
+      if (j.state === 'arriving' && now >= (j.acceptedAt ?? 0) + ARRIVE_MS) { this.toast(`El auto de ${j.client} llegó a la bahía`); return { ...j, state: 'waiting' }; }
+      if (j.state === 'repairing' && now >= (j.endsAt ?? 0)) { this.toast(`${getClientJob(j.jobId).icon} Trabajo de ${j.client} listo para cobrar`); return { ...j, state: 'ready' }; }
+      if (j.state === 'leaving' && now >= (j.leaveAt ?? 0) + LEAVE_MS) return null;
+      if (j.state === 'offered' && now >= j.offeredAt + OFFER_TTL_MS) return null;
+      return j;
+    });
+    if (this.hasEquip('reception')) {
+      const offers = jobs.filter((j) => j.state === 'offered').length;
+      if (next === 0) { next = now + 4000; changed = true; }
+      else if (now >= next) {
+        if (offers < maxOffers(repLevel(b.rep), b.recLevel ?? 1)) { const o = this.makeOffer(now); o.id = `k${nextId++}`; jobs = [...jobs, o]; this.toast(`🚗 Nuevo cliente: ${o.client} · ${getClientJob(o.jobId).name}`); }
+        next = now + OFFER_EVERY_MS; changed = true;
+      }
+    }
+    if (changed) this.setBiz({ jobs, nextOfferAt: next, nextId });
   }
 
   // ---- trabajos
@@ -294,6 +394,7 @@ export class GameStore {
     let changed = false; const jobs = { ...this.save.jobs };
     for (const [id, j] of Object.entries(jobs)) if (!j.done && now >= j.endsAt) { jobs[id] = { ...j, done: true }; changed = true; }
     if (changed) this.setSave({ jobs });
+    this.tickBiz(now);
     this.setUI({ now });
   }
 

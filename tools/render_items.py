@@ -57,7 +57,7 @@ sc.world.use_nodes = True
 bg = sc.world.node_tree.nodes['Background']; bg.inputs[0].default_value = (0.008, 0.012, 0.018, 1); bg.inputs[1].default_value = 0.2
 keep_lights = [o for o in bpy.data.objects if o.type == 'LIGHT']
 EXTRA_WALL = set()
-if os.environ.get('EXTRA'): exec(open(os.environ['EXTRA']).read())   # accesorios adicionales (p. ej. tools/jdm_items.py)
+for _f in [x for x in os.environ.get('EXTRA', '').split(',') if x]: exec(open(_f).read())   # accesorios adicionales (p. ej. tools/jdm_items.py)
 
 def objs(col): return [o for o in bpy.data.collections[col].all_objects if o]
 shop_cols = [c.name for c in bpy.data.collections if c.name.startswith('SHOP_')]

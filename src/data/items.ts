@@ -1,7 +1,7 @@
 // Catálogo de accesorios para decorar y equipar el taller. Los modelos vienen de GL_SHOP_ASSETS_V10 (Blender),
 // renderizados con tools/render_items.py. Para añadir un artículo: una entrada aquí + su sprite (4 rotaciones).
 // Precios en GarageCoins (la misma moneda del juego); son configurables.
-export type ItemCategory = 'equipamiento' | 'herramientas' | 'muebles' | 'almacenamiento' | 'pared' | 'jdm';
+export type ItemCategory = 'equipamiento' | 'herramientas' | 'muebles' | 'almacenamiento' | 'pared' | 'jdm' | 'taller' | 'especial';
 export type ItemKind = 'floor' | 'wall';
 export interface ItemDef {
   id: string;                 // coincide con item_<id>_<rot>.png
@@ -14,6 +14,10 @@ export interface ItemDef {
   w: number; d: number;
   /** modelo todavía sin función de juego (solo decoración) */
   prototype?: boolean;
+  /** nivel del jugador necesario para comprarlo */
+  minLevel?: number;
+  /** objetos de negocio con reglas propias: la recepción habilita Clientes; la bahía se instala sobre una plaza de auto */
+  special?: 'reception' | 'bay';
 }
 
 export const CATEGORIES: { id: ItemCategory; name: string; icon: string }[] = [
@@ -23,6 +27,8 @@ export const CATEGORIES: { id: ItemCategory; name: string; icon: string }[] = [
   { id: 'almacenamiento', name: 'Almacenamiento', icon: '🗄️' },
   { id: 'pared', name: 'Decoración de pared', icon: '🖼️' },
   { id: 'jdm', name: 'JDM / Tuning', icon: '🏎️' },
+  { id: 'especial', name: 'Equipamiento especial', icon: '🧾' },
+  { id: 'taller', name: 'Equipamiento de taller', icon: '🛠️' },
 ];
 
 export const ITEMS: ItemDef[] = [
@@ -38,6 +44,9 @@ export const ITEMS: ItemDef[] = [
   { id: 'neon_sign', name: 'Letrero de neón', price: 1800, category: 'pared', kind: 'wall', desc: 'Letrero luminoso para el muro del taller.', w: 2.4, d: 0.18 },
   { id: 'vending_machine', name: 'Máquina de bebidas', price: 2500, category: 'muebles', kind: 'floor', desc: 'Máquina expendedora. Decorativa por ahora.', w: 1.0, d: 0.84, prototype: true },
   { id: 'car_lift', name: 'Elevador de autos', price: 4500, category: 'equipamiento', kind: 'floor', desc: 'Elevador de dos columnas. : aún no sube autos.', w: 3.4, d: 0.44, prototype: true },
+  // ---- negocio de clientes (ver src/data/clients.ts)
+  { id: 'reception', name: 'Recepción de Clientes', price: 15000, category: 'especial', kind: 'floor', minLevel: 10, special: 'reception', desc: 'Mostrador con computadora. Instalada en el taller, desbloquea los trabajos de clientes.', w: 2.54, d: 1.34 },
+  { id: 'service_bay', name: 'Bahía de Servicio', price: 5000, category: 'taller', kind: 'floor', minLevel: 10, special: 'bay', desc: 'Se instala sobre una plaza de auto libre y la reserva para vehículos de clientes. Al retirarla, la plaza vuelve a ser estacionamiento.', w: 3.4, d: 6.6 },
   // ---- JDM / tuning (decorativos): modelados con primitivas en tools/jdm_items.py
   { id: 'tire_stack', name: 'Pila de llantas con rin', price: 350, category: 'jdm', kind: 'floor', desc: 'Tres llantas apiladas con un rin dorado de exhibición.', w: 0.72, d: 0.72, prototype: true },
   { id: 'paper_lantern', name: 'Linterna japonesa', price: 300, category: 'jdm', kind: 'floor', desc: 'Linterna de papel roja sobre pie metálico, luz cálida de izakaya.', w: 0.6, d: 0.6, prototype: true },

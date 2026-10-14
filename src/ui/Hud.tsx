@@ -14,7 +14,9 @@ export function Hud() {
   const soc = useSocial();
   const car = save.cars.find((c) => c.id === ui.selectedId);
   const job = car ? save.jobs[car.id] : undefined;
-  const ready = Object.values(save.jobs).filter((j) => j.done || ui.now >= j.endsAt).length;
+  const readyMine = Object.values(save.jobs).filter((j) => j.done || ui.now >= j.endsAt).length;
+  const readyClients = (save.biz?.jobs ?? []).filter((j) => j.state === 'ready' && !j.claimed).length;
+  const ready = readyMine + readyClients;
   const open = (p: 'garage' | 'shop' | 'jobs' | 'settings' | 'inventory' | 'expand' | 'friends') => store.openPanel(ui.panel === p ? null : p);
 
   const customize = () => {
@@ -40,7 +42,7 @@ export function Hud() {
         </div>
         <div className="pill money">💵 <b>${fmt(save.money)}</b></div>
         <div className="spacer" />
-        {ready > 0 && <button className="btn primary pulse" onClick={() => store.collectAll()}>💰 Cobrar ({ready})</button>}
+        {ready > 0 && <button className="btn primary pulse" onClick={() => { store.collectAll(); (save.biz?.jobs ?? []).filter((j) => j.state === 'ready').forEach((j) => store.claimClient(j.id)); }}>💰 Cobrar ({ready})</button>}
         <div className="cam">
           <button className="icon" title="Acercar" onClick={() => bridge.scene?.zoomBy(1.25)}>＋</button>
           <button className="icon" title="Alejar" onClick={() => bridge.scene?.zoomBy(0.8)}>－</button>

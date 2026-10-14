@@ -72,3 +72,31 @@ box(c, 'Board', (0, 0, 2.0), (1.5, 0.04, 0.62), 'dark')
 for i, (px, m) in enumerate(((-0.48, 'white'), (0, 'yellow'), (0.48, 'white'))): box(c, 'Plate', (px, -0.035, 2.0), (0.42, 0.025, 0.2), m)
 c = col('SHOP_22_NEON_BAR'); EXTRA_WALL.add('SHOP_22_NEON_BAR')
 box(c, 'Back', (0, 0, 2.1), (2.1, 0.04, 0.34), 'dark'); box(c, 'Red', (0, -0.05, 2.18), (1.9, 0.045, 0.06), 'neon_red'); box(c, 'Blue', (0, -0.05, 2.02), (1.9, 0.045, 0.06), 'neon_blue')
+
+# =====================  NEGOCIO: Recepcion de Clientes y Bahia de Servicio  =====================
+M['screen'] = mk('screen', (0.02, 0.1, 0.25), 0.2, 0, (0.1, 0.45, 1.0), 2.5)
+M['bayfloor'] = mk('bayfloor', (0.025, 0.03, 0.04), 0.55, 0.1)
+M['counter'] = mk('counter', (0.55, 0.57, 0.6), 0.3, 0.5)
+c = col('SHOP_23_RECEPTION')
+box(c, 'Body', (0, 0, 0.5), (2.3, 0.78, 1.0), 'dark')                                  # mostrador
+box(c, 'FrontPanel', (0, -0.4, 0.5), (2.1, 0.04, 0.72), 'red')                          # frente rojo de taller
+box(c, 'NeonStrip', (0, -0.425, 0.1), (2.1, 0.02, 0.04), 'neon_blue')
+box(c, 'Top', (0, -0.02, 1.03), (2.42, 0.92, 0.06), 'counter')                          # cubierta de acero
+box(c, 'WingTop', (1.05, 0.55, 0.78), (0.55, 0.62, 0.05), 'counter'); box(c, 'WingBody', (1.05, 0.55, 0.38), (0.5, 0.56, 0.76), 'dark')   # esquina de escritorio
+cyl(c, 'MonStand', (-0.55, 0.12, 1.12), 0.07, 0.12, 'steel'); box(c, 'MonBase', (-0.55, 0.12, 1.07), (0.3, 0.2, 0.02), 'steel')
+box(c, 'Monitor', (-0.55, 0.1, 1.42), (0.7, 0.05, 0.44), 'dark', (0, 0, 0)); box(c, 'Screen', (-0.55, 0.07, 1.42), (0.64, 0.01, 0.38), 'screen')
+box(c, 'Keyboard', (-0.55, -0.18, 1.07), (0.46, 0.15, 0.025), 'dark'); box(c, 'Mouse', (-0.2, -0.18, 1.07), (0.06, 0.1, 0.03), 'dark')
+cyl(c, 'BellBase', (0.5, -0.2, 1.08), 0.09, 0.02, 'gold'); cyl(c, 'BellDome', (0.5, -0.2, 1.12), 0.06, 0.06, 'gold')
+cyl(c, 'Mug', (0.15, 0.2, 1.1), 0.045, 0.1, 'white'); cyl(c, 'PenCup', (0.85, -0.05, 1.12), 0.05, 0.14, 'steel')
+box(c, 'Papers', (0.4, 0.25, 1.075), (0.26, 0.2, 0.03), 'white'); box(c, 'Brochures', (-1.0, -0.15, 1.15), (0.2, 0.1, 0.22), 'red')
+box(c, 'Phone', (0.95, 0.5, 0.835), (0.18, 0.18, 0.05), 'dark')
+c = col('SHOP_24_SERVICE_BAY')
+box(c, 'Mat', (0, 0, 0.006), (3.2, 6.4, 0.012), 'bayfloor')
+for sx in (-1.62, 1.62): box(c, 'EdgeLR', (sx, 0, 0.012), (0.12, 6.5, 0.016), 'yellow')
+for sy in (-3.22, 3.22): box(c, 'EdgeFB', (0, sy, 0.012), (3.32, 0.12, 0.016), 'yellow')
+for sx in (-0.95, 0.95): box(c, 'Guide', (sx, -0.2, 0.014), (0.08, 4.6, 0.014), 'white')
+for i in range(7):
+    box(c, 'Hazard', (-1.2 + i * 0.4, 2.85, 0.016), (0.2, 0.5, 0.014), 'yellow' if i % 2 == 0 else 'dark', (0, 0, 0.6))
+box(c, 'Drain', (0, 0.4, 0.02), (1.5, 0.28, 0.025), 'steel')
+for k in range(-3, 4): box(c, 'Slot', (k * 0.2, 0.4, 0.034), (0.07, 0.2, 0.01), 'dark')
+box(c, 'ChockL', (-0.75, -2.4, 0.07), (0.3, 0.14, 0.14), 'yellow'); box(c, 'ChockR', (0.75, -2.4, 0.07), (0.3, 0.14, 0.14), 'yellow')

@@ -13,6 +13,7 @@ import { itemUrl } from '../data/itemAssets';
 import { social, USERNAME_RE } from '../core/social';
 import { useSocial } from './useSocial';
 import { fmt, fmtTime, useGame } from './hooks';
+import { REP_LEVELS, repLevel, getClientJob, type ClientJob } from '../data/clients';
 
 function Sheet({ title, onClose, children, side }: { title: string; onClose: () => void; children: ReactNode; side?: boolean }) {
   return (
@@ -101,15 +102,15 @@ function ItemShop() {
       </div>
       <div className="list">
         {list.map((it) => {
-          const n = save.inventory?.[it.id] ?? 0;
+          const n = save.inventory?.[it.id] ?? 0; const lock = (it.minLevel ?? 1) > save.level;
           return (
-            <div key={it.id} className="card">
+            <div key={it.id} className={`card ${lock ? 'locked' : ''}`}>
               <ItemThumb id={it.id} />
               <div className="grow">
                 <b>{it.name}</b><small>{it.desc}</small>
                 <small>{CATEGORIES.find((c) => c.id === it.category)?.name}{it.kind === 'wall' ? ' · va en la pared' : ''}{it.prototype ? ' · decorativo' : ''}{n ? ` · Tienes ${n}` : ''}</small>
               </div>
-              <div className="col"><button className="btn primary" disabled={save.money < it.price} onClick={() => store.buyItem(it.id)}>${fmt(it.price)}</button></div>
+              <div className="col"><button className="btn primary" disabled={lock || save.money < it.price} onClick={() => store.buyItem(it.id)}>{lock ? `🔒 Nivel ${it.minLevel}` : `$${fmt(it.price)}`}</button></div>
             </div>
           );
         })}
@@ -302,6 +303,82 @@ function FriendsPanel() {
 }
 
 function JobsPanel() {
+  const { ui } = useGame();
+  const tab = ui.jobsTab ?? 'mine';
+  return (
+    <>
+      <div className="tabs">
+        <button className={tab === 'mine' ? 'on' : ''} onClick={() => store.setJobsTab('mine')}>🚗 Mis carros</button>
+        <button className={tab === 'clients' ? 'on' : ''} onClick={() => store.setJobsTab('clients')}>🧾 Clientes</button>
+      </div>
+      {tab === 'mine' ? <MyCarsJobs /> : <ClientsPanel />}
+    </>
+  );
+}
+
+const STATE_TXT: Record<string, string> = { offered: 'Esperando respuesta', arriving: 'En camino', waiting: 'En la bahía', repairing: 'Reparando', ready: 'Listo para cobrar', leaving: 'Saliendo' };
+
+function ClientsPanel() {
+  const { save, ui } = useGame();
+  const biz = save.biz; const rep = biz?.rep ?? 0; const lvl = repLevel(rep);
+  const cur = REP_LEVELS[lvl - 1], nxt = REP_LEVELS[lvl];
+  const hasRec = store.hasEquip('reception'), bays = store.bays(), free = store.freeBays();
+  const pct = nxt ? Math.min(100, ((rep - cur.from) / (nxt.from - cur.from)) * 100) : 100;
+  const jobs = biz?.jobs ?? [];
+  const offers = jobs.filter((j) => j.state === 'offered'), active = jobs.filter((j) => j.state !== 'offered');
+  const rec = getItem('reception')!, bay = getItem('service_bay')!;
+  const have = (id: string) => (save.inventory?.[id] ?? 0) > 0;
+  if (!hasRec) return (
+    <div className="list">
+      <div className="card locked"><div className="grow"><b>🧾 Recepción de Clientes</b>
+        <small>Para atender clientes necesitas instalar la Recepción (${fmt(rec.price)}, nivel {rec.minLevel}) y al menos una Bahía de Servicio (${fmt(bay.price)}, nivel {bay.minLevel}).</small>
+        <small>{have('reception') ? 'Ya la tienes en tu inventario: colócala en 🛠️ Editar garaje.' : save.level < (rec.minLevel ?? 1) ? `🔒 Se desbloquea en el nivel ${rec.minLevel}.` : 'Cómprala en la tienda → Accesorios → Equipamiento especial.'}</small></div>
+        <div className="col"><button className="btn primary" onClick={() => store.openPanel(have('reception') ? 'inventory' : 'shop')}>{have('reception') ? 'Inventario' : 'Tienda'}</button></div></div>
+    </div>
+  );
+  return (
+    <>
+      <div className="card"><div className="grow">
+        <b>🏆 {cur.name}</b><small>Reputación {rep}{nxt ? ` / ${nxt.from} para «${nxt.name}»` : ' · nivel máximo'}</small>
+        <div className="mini"><i style={{ width: `${pct}%` }} /></div>
+        <small>🛠️ Bahías libres: {free.length} / {bays.length} · Trabajos hechos: {biz?.done ?? 0}</small>
+      </div></div>
+      {bays.length === 0 && (
+        <div className="card locked"><div className="grow"><b>🛠️ Necesitas una Bahía de Servicio</b>
+          <small>Instálala sobre una plaza libre de tu estacionamiento para recibir los autos de clientes.</small></div>
+          <div className="col"><button className="btn primary" onClick={() => store.openPanel(have('service_bay') ? 'inventory' : 'shop')}>{have('service_bay') ? 'Inventario' : 'Tienda'}</button></div></div>
+      )}
+      {active.length > 0 && (<><h3>Trabajos de clientes</h3><div className="list">{active.map((j) => <ClientCard key={j.id} j={j} now={ui.now} />)}</div></>)}
+      <h3>Solicitudes</h3>
+      {offers.length === 0 ? <p className="muted">Por ahora no hay clientes esperando. Llegarán pronto.</p> : <div className="list">{offers.map((j) => <ClientCard key={j.id} j={j} now={ui.now} />)}</div>}
+    </>
+  );
+}
+
+function ClientCard({ j, now }: { j: ClientJob; now: number }) {
+  const def = getClientJob(j.jobId), m = getModel(j.model);
+  const why = j.state === 'offered' ? store.cantAccept(j) : '';
+  const left = j.endsAt ? j.endsAt - now : 0;
+  return (
+    <div className="card">
+      <div className="grow">
+        <b>{def.icon} {def.name} · {j.client}</b>
+        <small>{m.name} · 💰 ${fmt(j.pay)} · +{j.xp} XP · ⏱ {fmtTime(j.seconds * 1000)}</small>
+        <small>Equipo: {def.needs ? (getItem(def.needs)?.name ?? def.needs) : 'Bahía de servicio'} · Estado: {STATE_TXT[j.state]}</small>
+        {why && <small style={{ color: 'var(--bad, #ff4d6a)' }}>{why}</small>}
+        {j.state === 'repairing' && <div className="mini"><i style={{ width: `${Math.min(100, (1 - left / (j.seconds * 1000)) * 100)}%` }} /></div>}
+      </div>
+      <div className="col">
+        {j.state === 'offered' && <button className="btn primary" disabled={!!why} onClick={() => store.acceptClient(j.id)}>Aceptar</button>}
+        {j.state === 'waiting' && <button className="btn primary" onClick={() => store.startRepair(j.id)}>🔧 Reparar</button>}
+        {j.state === 'repairing' && <span className="timer">{fmtTime(left)}</span>}
+        {j.state === 'ready' && <button className="btn primary" onClick={() => store.claimClient(j.id)}>💰 Cobrar</button>}
+      </div>
+    </div>
+  );
+}
+
+function MyCarsJobs() {
   const { save, ui } = useGame();
   const idle = save.cars.filter((c) => !save.jobs[c.id]);
   const [carId, setCarId] = useState<string | null>(ui.selectedId && !save.jobs[ui.selectedId] ? ui.selectedId : idle[0]?.id ?? null);

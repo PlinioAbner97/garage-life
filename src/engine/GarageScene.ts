@@ -5,13 +5,14 @@ import { hasZone, isSlotUnlocked } from '../core/save';
 import { getModel } from '../data/vehicles';
 import { findPaint, findRim } from '../data/parts';
 import { getJob } from '../data/jobs';
+import { ARRIVE_MS, LEAVE_MS, getClientJob, type ClientJob } from '../data/clients';
 import { dpr, TEXT_RES } from './dpr';
 import { CarPainter, type PainterMap } from './recolor';
 import { ITEMS, getItem, type ItemDef } from '../data/items';
 import { itemUrl } from '../data/itemAssets';
 import itemsInfo from '../assets/items/items_info.json';
 import { findFloor, findWall } from '../data/items';
-import { GARAGE_RECT, footprint, snapWall, snapGrid, validate, type Placed, type Rot, type Verdict } from '../core/layout';
+import { GARAGE_RECT, bayPath, footprint, nearestSlot, snapWall, snapGrid, validate, type Placed, type Rot, type Verdict } from '../core/layout';
 import { ASSETS, BG, LOT, PROJ, STREETS, SPRITE_INFO, SPRITE_KEYS, SPRITE_SCALE } from './assets';
 
 // Mundo = garaje original (BG, vista inicial) dentro del lote completo (LOT) y las calles (STREETS).
@@ -45,6 +46,7 @@ interface CarView {
 export class GarageScene extends Phaser.Scene {
   private painters!: PainterMap;
   private cars = new Map<string, CarView>();
+  private clientCars = new Map<string, CarView>();
   private slotGfx!: Phaser.GameObjects.Graphics;
   private slotTexts: Phaser.GameObjects.Text[] = [];
   private ring!: Phaser.GameObjects.Graphics;
@@ -186,6 +188,8 @@ export class GarageScene extends Phaser.Scene {
     const s = store.getSnapshot();
     if (s.ui.edit || s.ui.visit) return;
     const world = this.cameras.main.getWorldPoint(p.x, p.y);
+    const ch = this.input.hitTestPointer(p).filter((o): o is Phaser.GameObjects.Image => o instanceof Phaser.GameObjects.Image && !!o.getData('clientId'));
+    if (ch.length) { this.tapClient(ch[0].getData('clientId') as string); return; }
     const hits = this.input.hitTestPointer(p).filter((o): o is Phaser.GameObjects.Image => o instanceof Phaser.GameObjects.Image && o.getData('carId'));
     hits.sort((a, b) => b.depth - a.depth);
     if (hits.length) {
@@ -212,6 +216,7 @@ export class GarageScene extends Phaser.Scene {
     }
     if (best >= 0 && bd < 150) {
       const occupied = s.save.cars.find((c) => c.slot === best);
+      if ((s.save.placed ?? []).some((q) => q.slot === best && getItem(q.item)?.special === 'bay')) { store.setJobsTab('clients'); store.openPanel('jobs'); return; }
       if (!isSlotUnlocked(s.save, best)) { store.openPanel('shop'); store.toast(`Plaza bloqueada: $${slotCost(best).toLocaleString('es')} en la tienda`, 'bad'); return; }
       if (occupied) { store.selectCar(occupied.id); return; }
       if (s.ui.selectedId) { store.moveCar(s.ui.selectedId, best); return; }
@@ -237,21 +242,36 @@ export class GarageScene extends Phaser.Scene {
   private drawSlots(s: Snapshot) {
     const g = this.slotGfx; g.clear();
     const occupied = new Set(s.save.cars.map((c) => c.slot));
+    const editing = !!s.ui.edit;
+    const placed = s.ui.edit ? s.ui.edit.draft : s.save.placed ?? [];
+    const bayAt = new Map<number, Placed>();
+    for (const p of placed) if (getItem(p.item)?.special === 'bay' && p.slot !== undefined) bayAt.set(p.slot, p);
+    const busy = new Set((s.save.biz?.jobs ?? []).filter((j) => j.bay && j.state !== 'offered').map((j) => j.bay));
     for (let i = 0; i < TOTAL_SLOTS; i++) {
       const t = this.slotTexts[i];
       if (!slotInPlay(s.save, i)) { t.setText(''); continue; }
       const pts = this.slotCorners(i);
       const locked = !isSlotUnlocked(s.save, i);
-      const free = !locked && !occupied.has(i);
+      const bay = bayAt.get(i);
+      const free = !locked && !occupied.has(i) && !bay;
+      const box = (fill: number, fa: number, line: number, la: number) => { g.fillStyle(fill, fa); g.fillPoints(pts, true); g.lineStyle(4, line, la); g.strokePoints(pts, true); };
       if (locked) {
         g.fillStyle(0x05070f, 0.55); g.fillPoints(pts, true);
         g.lineStyle(3, 0x6b7390, 0.7); g.strokePoints(pts, true);
         t.setText(`🔒\n$${slotCost(i).toLocaleString('es')}`).setAlpha(0.95);
+      } else if (bay) {
+        const inUse = busy.has(bay.uid);
+        box(inUse ? 0xffb020 : 0x38c8ff, 0.16, inUse ? 0xffb020 : 0x38c8ff, 0.95);
+        t.setText(inUse ? '🛠️ Bahía ocupada' : '🛠️ Bahía libre').setAlpha(0.95);
+        if (!editing) t.setText(inUse ? '' : '🛠️ Bahía');
       } else if (free) {
-        const moving = !!s.ui.selectedId;
+        const moving = !!s.ui.selectedId && !editing;
         g.fillStyle(moving ? 0x38e08a : 0xffffff, moving ? 0.22 : 0.08); g.fillPoints(pts, true);
         g.lineStyle(4, moving ? 0x38e08a : 0xffffff, moving ? 0.95 : 0.4); g.strokePoints(pts, true);
-        t.setText(moving ? 'Mover aquí' : '＋ Libre').setAlpha(moving ? 1 : 0.8);
+        t.setText(editing ? 'Plaza libre' : moving ? 'Mover aquí' : '＋ Libre').setAlpha(moving ? 1 : 0.8);
+      } else if (editing) {
+        g.lineStyle(4, 0xffb020, 0.8); g.strokePoints(pts, true);
+        t.setText('Plaza ocupada').setAlpha(0.85);
       } else t.setText('');
     }
   }
@@ -368,9 +388,79 @@ export class GarageScene extends Phaser.Scene {
     for (const [id, v] of this.cars) if (!seen.has(id)) { [v.sprite, v.bar, v.icon, v.tag].forEach((o) => o.destroy()); this.cars.delete(id); }
     this.drawOverlays(s);
     this.syncPlaced(s);
+    this.syncClients(s);
   }
 
-  private sprites(visible: boolean) { this.cars.forEach((v) => [v.sprite, v.bar, v.icon, v.tag].forEach((o) => o.setVisible(visible))); this.slotGfx.setVisible(visible); this.ring.setVisible(visible); this.slotTexts.forEach((t) => t.setVisible(visible)); }
+  /** Posición del sprite de un auto de modelo `spriteKey` centrado en (wx, wy) metros (misma regla que los autos del garaje). */
+  private carPos(spriteKey: keyof typeof SPRITE_INFO, wx: number, wy: number): Pt {
+    const info = SPRITE_INFO[spriteKey]; const [ax, ay] = info.anchorWorld; const k = SPRITE_SCALE[spriteKey as keyof typeof SPRITE_SCALE];
+    const d = { x: (wx - ax) * PROJ.x[0] + (wy - ay) * PROJ.y[0], y: (wx - ax) * PROJ.x[1] + (wy - ay) * PROJ.y[1] };
+    const px = info.box[0] + d.x, py = info.box[1] + d.y, c = project(wx, wy);
+    return { x: c.x + (px - c.x) * k, y: c.y + (py - c.y) * k };
+  }
+  /** Dónde está el auto del cliente ahora (metros), o null si no está en el taller. Todo sale de marcas de tiempo. */
+  private clientAt(j: ClientJob, bay: Placed, now: number): Pt | null {
+    if (bay.slot === undefined) return null;
+    const path = bayPath(bay.slot).map(([x, y]) => ({ x, y }));
+    const along = (t: number): Pt => {
+      const f = Math.min(1, Math.max(0, t)); const L = path.slice(1).map((q, i) => Math.hypot(q.x - path[i].x, q.y - path[i].y)); const tot = L.reduce((a, b) => a + b, 0);
+      let d = f * tot;
+      for (let i = 0; i < L.length; i++) { if (d <= L[i] || i === L.length - 1) { const u = L[i] ? Math.min(1, d / L[i]) : 1; return { x: path[i].x + (path[i + 1].x - path[i].x) * u, y: path[i].y + (path[i + 1].y - path[i].y) * u }; } d -= L[i]; }
+      return path[path.length - 1];
+    };
+    if (j.state === 'arriving') return along((now - (j.acceptedAt ?? now)) / ARRIVE_MS);
+    if (j.state === 'leaving') { const t = (now - (j.leaveAt ?? now)) / LEAVE_MS; return t >= 1 ? null : along(1 - t); }
+    if (j.state === 'waiting' || j.state === 'repairing' || j.state === 'ready') return path[path.length - 1];
+    return null;
+  }
+  private tapClient(id: string) {
+    const j = store.getSnapshot().save.biz?.jobs.find((x) => x.id === id); if (!j) return;
+    if (j.state === 'ready') store.claimClient(id);
+    else if (j.state === 'waiting') store.startRepair(id);
+    else { store.setJobsTab('clients'); store.openPanel('jobs'); }
+  }
+  /** Autos temporales de clientes: nunca son del jugador ni entran a su colección. */
+  private syncClients(s: Snapshot) {
+    const seen = new Set<string>();
+    const jobs = this.visiting || s.ui.screen !== 'game' ? [] : s.save.biz?.jobs ?? [];
+    for (const j of jobs) {
+      const bay = (s.save.placed ?? []).find((p) => p.uid === j.bay);
+      if (!bay) continue;
+      const pos = this.clientAt(j, bay, s.ui.now); if (!pos) continue;
+      seen.add(j.id);
+      const m = getModel(j.model); const key = this.texFor(j.model, j.paint, j.rim);
+      let v = this.clientCars.get(j.id);
+      if (!v) {
+        const sprite = this.add.image(0, 0, key).setOrigin(0).setData('clientId', j.id);
+        sprite.setInteractive({ pixelPerfect: true, alphaTolerance: 30 });
+        const bar = this.add.graphics().setDepth(900);
+        const icon = this.add.text(0, 0, '', { fontSize: '44px' }).setOrigin(0.5).setDepth(901).setResolution(TEXT_RES);
+        const tag = this.add.text(0, 0, '', { fontFamily: 'Fredoka, system-ui', fontSize: '22px', color: '#fff', stroke: '#0b1020', strokeThickness: 5 }).setOrigin(0.5).setDepth(901).setResolution(TEXT_RES);
+        v = { sprite, texKey: key, model: j.model, slot: -1, bar, icon, tag };
+        this.clientCars.set(j.id, v);
+      }
+      {
+        v.sprite.setScale(SPRITE_SCALE[m.spriteKey]);
+        const q = this.carPos(m.spriteKey, pos.x, pos.y); v.sprite.setPosition(q.x, q.y);
+        const c = project(pos.x, pos.y);
+        v.sprite.setDepth(10 + c.y / 10);
+        v.bar.setPosition(c.x, c.y - 215); v.icon.setPosition(c.x, c.y - 262); v.tag.setPosition(c.x, c.y + 120);
+        v.bar.clear(); v.icon.setText('').setScale(1);
+        const def = getClientJob(j.jobId);
+        if (j.state === 'waiting') { v.icon.setText('🔧'); v.tag.setText(`${j.client} · toca para reparar`); }
+        else if (j.state === 'repairing') {
+          const total = j.seconds * 1000, left = Math.max(0, (j.endsAt ?? 0) - s.ui.now), f = 1 - left / total;
+          v.bar.fillStyle(0x05070f, 0.8); v.bar.fillRoundedRect(-70, 0, 140, 18, 9);
+          v.bar.fillStyle(0x38c8ff, 1); v.bar.fillRoundedRect(-68, 2, Math.max(8, 136 * f), 14, 7);
+          v.icon.setText(def.icon); v.tag.setText(`${def.name} · ${Math.ceil(left / 1000)}s`);
+        } else if (j.state === 'ready') { v.icon.setText('💰').setScale(1 + 0.12 * Math.sin(s.ui.now / 160)); v.tag.setText('¡Toca para cobrar!'); }
+        else v.tag.setText(j.client);
+      }
+    }
+    for (const [id, v] of this.clientCars) if (!seen.has(id)) { [v.sprite, v.bar, v.icon, v.tag].forEach((o) => o.destroy()); this.clientCars.delete(id); }
+  }
+
+  private sprites(visible: boolean) { this.clientCars.forEach((v) => [v.sprite, v.bar, v.icon, v.tag].forEach((o) => o.setVisible(visible))); this.cars.forEach((v) => [v.sprite, v.bar, v.icon, v.tag].forEach((o) => o.setVisible(visible))); this.slotGfx.setVisible(visible); this.ring.setVisible(visible); this.slotTexts.forEach((t) => t.setVisible(visible)); }
 
   private drawOverlays(s: Snapshot) {
     this.ring.clear();
@@ -400,7 +490,7 @@ export class GarageScene extends Phaser.Scene {
   update() {
     // animación del cobro y refresco de timers sin esperar al tick
     const s = store.getSnapshot();
-    if (s.ui.screen === 'game' && this.ready && !s.ui.visit) this.drawOverlays(s);
+    if (s.ui.screen === 'game' && this.ready && !s.ui.visit) { this.drawOverlays(s); this.syncClients({ ...s, ui: { ...s.ui, now: Date.now() } }); }
   }
 
   /** Acabados: tinte MULTIPLY sobre el suelo y los muros del garaje (debajo de autos y accesorios). */
@@ -442,7 +532,7 @@ export class GarageScene extends Phaser.Scene {
     for (const [uid, v] of this.placedViews) if (!seen.has(uid)) { v.img?.destroy(); this.placedViews.delete(uid); }
     this.drawEdit(s);
   }
-  private itemDepth(def: ItemDef, p: { x: number; y: number }) { return def.kind === 'wall' ? 4 : 5 + project(p.x, p.y + 0.0).y / 1000; }
+  private itemDepth(def: ItemDef, p: { x: number; y: number }) { return def.special === 'bay' ? 2.5 : def.kind === 'wall' ? 4 : 5 + project(p.x, p.y + 0.0).y / 1000; }
   private poly(fp: [number, number, number, number], color: number, a: number) {
     const pts = rectCorners(fp).map((q) => new Phaser.Math.Vector2(q.x, q.y));
     this.editGfx.fillStyle(color, a); this.editGfx.fillPoints(pts, true);
@@ -472,8 +562,12 @@ export class GarageScene extends Phaser.Scene {
       if (!w) { const fp0 = footprint(def, x, y, r); return { ok: false, reason: 'Va pegado a un muro', x, y, rot: r, fp: fp0 }; }
       x = w.x; y = w.y; r = w.rot;
     }
+    if (def.special === 'bay') {
+      const i = nearestSlot(gx, gy);
+      if (i >= 0) { x = SLOT_WORLD[i][0]; y = SLOT_WORLD[i][1]; r = 0; }
+    }
     const v = validate(def, x, y, r, s.save, others, getItem);
-    return { ...v, x, y, rot: r, fp: footprint(def, x, y, r) };
+    return { ...v, x: v.ok ? v.x : x, y: v.ok ? v.y : y, rot: v.ok ? v.rot : r, fp: footprint(def, v.ok ? v.x : x, v.ok ? v.y : y, v.ok ? v.rot : r) };
   }
   private editDown(p: Phaser.Input.Pointer) {
     const e = store.getSnapshot().ui.edit!; const g = this.pointerToGround(p);

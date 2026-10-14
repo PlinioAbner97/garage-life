@@ -77,3 +77,11 @@ Al crear cuenta, si ya había una partida local en ese dispositivo se sube a la 
 - Los amigos ven una copia reducida (`garages`: autos, zonas, accesorios, acabados y nivel; **sin dinero ni datos privados**). Se publica sola unos segundos después de cada guardado.
 - **Requiere ejecutar `supabase/schema_social.sql`** en Supabase → SQL Editor (tablas `profiles`, `friendships`, `garages` con RLS: solo el amigo aceptado puede leer tu garaje).
 - Próximo paso previsto: carreras entre amigos y contra IA (dinero y XP). Cuando se haga, el premio debería validarse en el servidor (función de Supabase), no en el cliente.
+
+## Clientes, Recepción y Bahías de Servicio
+- **Recepción** ($15.000, nivel 10) desbloquea la pestaña *Trabajos → Clientes*. **Bahía de Servicio** ($5.000, nivel 10) se instala sobre una plaza libre desbloqueada (el índice de plaza es estable) y la reserva para clientes. Al retirarla vuelve a ser estacionamiento normal. No se puede mover/retirar con un trabajo activo.
+- Para operar hacen falta la recepción y ≥1 bahía libre. Motor y transmisión requieren además el *Elevador* (`car_lift`).
+- Configuración (precios, tiempos, XP, reputación, autos de clientes): `src/data/clients.ts`. Equipos: `src/data/items.ts`. Validación de colocación: `src/core/layout.ts`. Lógica y máquina de estados (offered → arriving → waiting → repairing → ready → leaving): `src/core/store.ts` (`tickBiz`). Basada en marcas de tiempo, segura al recargar; la recompensa se marca `claimed` en la misma operación que se paga.
+- Los autos de clientes son temporales (no entran a la colección) y recorren `bayPath(slot)`; el camino queda reservado y no se puede bloquear con accesorios.
+- Pruebas: `npm run build && npx vite preview --port 4173` y `node tools/test_biz.mjs` (22 comprobaciones de los 16 casos).
+- Limitación: la validación es del lado del cliente (no hay servidor propio); para carreras/recompensas competitivas habrá que validar con una función de Supabase.
