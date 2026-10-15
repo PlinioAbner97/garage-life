@@ -85,3 +85,11 @@ Al crear cuenta, si ya había una partida local en ese dispositivo se sube a la 
 - Los autos de clientes son temporales (no entran a la colección) y recorren `bayPath(slot)`; el camino queda reservado y no se puede bloquear con accesorios.
 - Pruebas: `npm run build && npx vite preview --port 4173` y `node tools/test_biz.mjs` (22 comprobaciones de los 16 casos).
 - Limitación: la validación es del lado del cliente (no hay servidor propio); para carreras/recompensas competitivas habrá que validar con una función de Supabase.
+
+## Carreras
+- Panel 🏁 *Carreras*: duelos simulados contra la IA (4 categorías por nivel) o contra el mejor auto del garaje público de un amigo (nivel 2+; funciona aunque el amigo no esté conectado).
+- Inscripción + premio + XP; al perder solo XP de consolación (25 %). Enfriamiento de 3 min por auto. Todo configurable en `src/data/races.ts`.
+- El resultado (tiempos y ganador) se calcula al inscribirse y se guarda; la animación se dibuja desde `startedAt`, así que recargar no lo cambia. Cobrar borra la carrera en la misma operación (no se cobra dos veces).
+- Rendimiento = 0.5·potencia + 0.35·agarre + 0.15·estilo, con ±10 % de azar.
+- Pruebas: `node tools/test_race.mjs`.
+- Limitación: igual que los clientes, la validación es del lado del cliente; para premios competitivos reales hace falta una función de Supabase.

@@ -5,6 +5,7 @@ import { useGame } from './hooks';
 import { StartScreen } from './StartScreen';
 import { Hud } from './Hud';
 import { Panels } from './Panels';
+import { RaceOverlay } from './Race';
 
 export function App() {
   const host = useRef<HTMLDivElement>(null);
@@ -19,7 +20,7 @@ export function App() {
   return (
     <div className="app">
       <div ref={host} className="stage" />
-      {ui.screen === 'start' ? <StartScreen /> : (<><Hud /><Panels /></>)}
+      {ui.screen === 'start' ? <StartScreen /> : (<><Hud /><Panels /><RaceOverlay /></>)}
       <div className="toasts" aria-live="polite">
         {ui.toasts.map((t) => <div key={t.id} className={`toast ${t.kind}`}>{t.text}</div>)}
       </div>

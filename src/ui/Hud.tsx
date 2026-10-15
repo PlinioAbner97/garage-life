@@ -17,7 +17,7 @@ export function Hud() {
   const readyMine = Object.values(save.jobs).filter((j) => j.done || ui.now >= j.endsAt).length;
   const readyClients = (save.biz?.jobs ?? []).filter((j) => j.state === 'ready' && !j.claimed).length;
   const ready = readyMine + readyClients;
-  const open = (p: 'garage' | 'shop' | 'jobs' | 'settings' | 'inventory' | 'expand' | 'friends') => store.openPanel(ui.panel === p ? null : p);
+  const open = (p: 'garage' | 'shop' | 'jobs' | 'settings' | 'inventory' | 'expand' | 'friends' | 'races') => store.openPanel(ui.panel === p ? null : p);
 
   const customize = () => {
     if (!car) { store.toast('Primero toca un auto para seleccionarlo', 'bad'); return; }
@@ -85,6 +85,7 @@ export function Hud() {
         <button className={ui.panel === 'shop' ? 'on' : ''} onClick={() => open('shop')}><span>🛒</span>Tienda</button>
         <button className={ui.panel === 'inventory' ? 'on' : ''} onClick={() => open('inventory')}><span>📦</span>Inventario</button>
         <button onClick={() => store.enterEdit()}><span>🛠️</span>Editar</button>
+        <button className={ui.panel === 'races' ? 'on' : ''} onClick={() => open('races')}><span>🏁</span>Carreras</button>
         <button className={ui.panel === 'expand' ? 'on' : ''} onClick={() => open('expand')}><span>🗺️</span>Zonas</button>
       </nav>)}
     </>

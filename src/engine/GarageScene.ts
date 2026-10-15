@@ -610,6 +610,16 @@ export class GarageScene extends Phaser.Scene {
     if (cur) store.editMove(cur.uid, cur.x, cur.y, nr); else { this.editRot = nr; }
   }
 
+  private imgCache = new Map<string, string>();
+  /** Imagen (data URL) del auto pintado, para la pantalla de carreras. */
+  carImage(model: string, paint: string, rim: string): string {
+    if (!this.ready || !this.painters) return '';
+    const key = this.texFor(model, paint, rim); let u = this.imgCache.get(key);
+    if (!u) { u = (this.textures.get(key).getSourceImage() as HTMLCanvasElement).toDataURL('image/png'); this.imgCache.set(key, u); }
+    return u;
+  }
+  carBox(model: string): [number, number] { const b = SPRITE_INFO[getModel(model).spriteKey].box; return [b[2], b[3]]; }
+
   focusCar(id: string) {
     const car = store.getSnapshot().save.cars.find((c) => c.id === id); if (!car) return;
     const c = project(SLOT_WORLD[car.slot][0], SLOT_WORLD[car.slot][1], 0.8);

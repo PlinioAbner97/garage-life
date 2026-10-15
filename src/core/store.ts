@@ -1,5 +1,6 @@
 import { START_MONEY, SELL_RATIO, SLOT_COUNT, TOTAL_SLOTS, SLOT_UNLOCK_COST, getZone, xpForLevel } from '../data/config';
 import { ITEMS, getItem, findFloor, findWall, FLOOR_FINISHES, WALL_FINISHES } from '../data/items';
+import { LOSS_XP_RATIO, RACE_CD_MS, RACE_COUNTDOWN_MS, FRIEND_MIN_LEVEL, RACE_TIERS, raceEndsAt, simulate, type RaceOpp } from '../data/races';
 import { CLIENT_JOBS, CLIENT_CARS_BY_REP, CLIENT_NAMES, ARRIVE_MS, LEAVE_MS, OFFER_EVERY_MS, OFFER_TTL_MS, freshBiz, getClientJob, maxOffers, repLevel, repPayMult, type BizState, type ClientJob } from '../data/clients';
 import { PAINTS } from '../data/parts';
 import { social, type PublicGarage } from './social';
@@ -12,7 +13,7 @@ import { LocalSaveStore, isSlotUnlocked, hasZone, type OwnedCar, type SaveData, 
 export interface Toast { id: number; text: string; kind: 'ok' | 'bad' | 'level' }
 export interface UIState {
   screen: 'start' | 'game';
-  panel: null | 'garage' | 'shop' | 'inventory' | 'expand' | 'style' | 'jobs' | 'customize' | 'settings' | 'friends';
+  panel: null | 'races' | 'garage' | 'shop' | 'inventory' | 'expand' | 'style' | 'jobs' | 'customize' | 'settings' | 'friends';
   /** pestaña del menú Trabajos */
   jobsTab: 'mine' | 'clients';
   selectedId: string | null;
@@ -330,6 +331,32 @@ export class GameStore {
     this.grant(j.pay, j.xp);
     this.toast(`${getClientJob(j.jobId).icon} ${j.client}: +$${j.pay.toLocaleString('es')}  +${j.xp} XP`);
     if (after > before) this.toast(`¡Tu taller subió de reputación!`, 'level');
+    return true;
+  }
+  // ---- carreras
+  raceCooldown(carId: string) { return Math.max(0, (this.save.raceCd?.[carId] ?? 0) - Date.now()); }
+  startRace(carId: string, opp: RaceOpp): boolean {
+    const car = this.save.cars.find((c) => c.id === carId);
+    if (!car) return false;
+    if (this.save.race) { this.toast('Ya tienes una carrera en curso', 'bad'); return false; }
+    const tier = opp.tier ? RACE_TIERS.find((t) => t.id === opp.tier) : undefined;
+    if (opp.kind === 'ai' && (!tier || this.save.level < tier.minLevel)) { this.toast('Aún no tienes el nivel para esa categoría', 'bad'); return false; }
+    if (opp.kind === 'friend' && this.save.level < FRIEND_MIN_LEVEL) { this.toast(`Duelos con amigos desde el nivel ${FRIEND_MIN_LEVEL}`, 'bad'); return false; }
+    if (this.save.jobs[carId]) { this.toast('Ese auto está en un trabajo', 'bad'); return false; }
+    if (this.raceCooldown(carId) > 0) { this.toast('Ese auto está descansando entre carreras', 'bad'); return false; }
+    if (this.save.money < opp.fee) { this.toast('No te alcanza para la cuota de inscripción', 'bad'); return false; }
+    const r = simulate(car.model, opp);
+    const id = (this.save.raceCount ?? 0) + 1;
+    this.setSave({ money: this.save.money - opp.fee, raceCount: id, race: { id, carId, model: car.model, paint: car.paint, rim: car.rim, opp, myT: r.myT, oppT: r.oppT, startedAt: Date.now(), win: r.win } });
+    return true;
+  }
+  /** Cobra la carrera terminada. El estado se borra en la misma operación: no se puede cobrar dos veces. */
+  claimRace(): boolean {
+    const r = this.save.race; if (!r || Date.now() < raceEndsAt(r)) return false;
+    const cd = { ...(this.save.raceCd ?? {}), [r.carId]: Date.now() + RACE_CD_MS };
+    this.setSave({ race: undefined, raceCd: cd, raceWins: (this.save.raceWins ?? 0) + (r.win ? 1 : 0) });
+    if (r.win) { this.grant(r.opp.prize, r.opp.xp); this.toast(`🏁 ¡Ganaste! +$${r.opp.prize.toLocaleString('es')}  +${r.opp.xp} XP`, 'level'); }
+    else { const xp = Math.round(r.opp.xp * LOSS_XP_RATIO); this.grant(0, xp); this.toast(`Perdiste la carrera · +${xp} XP`, 'bad'); }
     return true;
   }
   setJobsTab(t: 'mine' | 'clients') { this.setUI({ jobsTab: t }); }

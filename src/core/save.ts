@@ -1,3 +1,4 @@
+import type { RaceState } from '../data/races';
 import { SLOT_COUNT, zoneOfSlot } from '../data/config';
 
 import type { Placed } from './layout';
@@ -28,6 +29,10 @@ export interface SaveData {
   style?: { floor?: string; wall?: string; owned?: string[] };
   /** negocio de clientes: reputación, trabajos de clientes (con sus autos temporales) y llegada de solicitudes */
   biz?: BizState;
+  race?: RaceState;
+  raceCd?: Record<string, number>;
+  raceWins?: number;
+  raceCount?: number;
   /** marca de tiempo del último guardado (para elegir entre copia local y nube) */
   savedAt?: number;
 }

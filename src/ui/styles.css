@@ -127,3 +127,14 @@ select { font: inherit; padding: 10px; border-radius: 10px; background: var(--pa
 .visitbar { position: absolute; left: 50%; transform: translateX(-50%); top: calc(76px + var(--safe-t)); z-index: 6; display: flex; gap: 12px; align-items: center; justify-content: space-between; background: rgba(11,16,32,.94); border: 1px solid var(--accent); border-radius: 16px; padding: 8px 12px; width: min(440px, calc(100% - 20px)); }
 .visitbar div { display: grid; line-height: 1.15; } .visitbar b { font-size: 18px; } .visitbar small { color: var(--muted); }
 .icon.fr { position: relative; } .icon.fr em { position: absolute; top: -4px; right: -4px; background: var(--bad); color: #fff; font-style: normal; border-radius: 10px; min-width: 18px; height: 18px; font-size: 11px; display: grid; place-items: center; }
+
+/* carreras */
+.raceov { position: fixed; inset: 0; z-index: 60; background: radial-gradient(ellipse at 50% 40%, #16203f, #070a16 75%); display: flex; flex-direction: column; align-items: center; }
+.racehead { margin-top: calc(18px + env(safe-area-inset-top)); font-size: 22px; display: flex; gap: 10px; align-items: baseline; } .racehead span { color: var(--muted); font-size: 15px; }
+.racetrack { position: relative; flex: 1; width: 100%; overflow: hidden; }
+.racetrack .road { position: absolute; left: 50%; top: 50%; transform-origin: 50% 50%; background: repeating-linear-gradient(90deg, #2b3350 0 38px, #333c5c 38px 76px); border: 3px solid #ffb020; box-shadow: 0 0 40px rgba(0,0,0,.6); }
+.racetrack .finish { position: absolute; height: 18px; transform-origin: 50% 50%; background: repeating-linear-gradient(90deg, #fff 0 14px, #111 14px 28px); }
+.rcar { position: absolute; width: 230px; transform: translate(-50%, -62%); pointer-events: none; filter: drop-shadow(0 12px 10px rgba(0,0,0,.5)); }
+.racecd { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); font-size: 96px; font-weight: 800; color: #ffb020; text-shadow: 0 6px 24px rgba(0,0,0,.7); z-index: 5; } .racecd.go { color: #38e08a; }
+.racefoot { min-height: 150px; padding: 8px 16px calc(24px + env(safe-area-inset-bottom)); text-align: center; }
+.raceres h2 { margin: 0 0 4px; font-size: 30px; } .raceres p { margin: 0 0 12px; color: var(--muted); }

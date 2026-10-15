@@ -13,6 +13,7 @@ import { itemUrl } from '../data/itemAssets';
 import { social, USERNAME_RE } from '../core/social';
 import { useSocial } from './useSocial';
 import { fmt, fmtTime, useGame } from './hooks';
+import { RacesPanel } from './Race';
 import { REP_LEVELS, repLevel, getClientJob, type ClientJob } from '../data/clients';
 
 function Sheet({ title, onClose, children, side }: { title: string; onClose: () => void; children: ReactNode; side?: boolean }) {
@@ -33,6 +34,7 @@ export function Panels() {
     case 'inventory': return <Sheet title="Inventario" onClose={close}><InventoryPanel /></Sheet>;
     case 'expand': return <Sheet title="Expansiones del terreno" onClose={close}><ExpandPanel /></Sheet>;
     case 'friends': return <Sheet title="Amigos" onClose={close}><FriendsPanel /></Sheet>;
+    case 'races': return <Sheet title="Carreras" onClose={close}><RacesPanel /></Sheet>;
     case 'jobs': return <Sheet title="Trabajos del taller" onClose={close}><JobsPanel /></Sheet>;
     case 'customize': return <Sheet title="Personalizar" side onClose={() => { store.setPreview(null); close(); }}><CustomizePanel /></Sheet>;
     case 'settings': return <Sheet title="Ajustes" onClose={close}><SettingsPanel /></Sheet>;
