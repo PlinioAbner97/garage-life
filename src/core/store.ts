@@ -1,7 +1,7 @@
 import { START_MONEY, SELL_RATIO, SLOT_COUNT, TOTAL_SLOTS, SLOT_UNLOCK_COST, SLOT_WORLD, getZone, xpForLevel } from '../data/config';
 import { ITEMS, getItem, findFloor, findWall, FLOOR_FINISHES, WALL_FINISHES } from '../data/items';
 import { LOSS_XP_RATIO, RACE_CD_MS, FRIEND_MIN_LEVEL, RACE_TIERS, type RaceOpp, type RaceResult } from '../data/races';
-import { CLIENT_JOBS, CLIENT_CARS_BY_REP, CLIENT_NAMES, ARRIVE_MS, LEAVE_MS, OFFER_EVERY_MS, OFFER_TTL_MS, freshBiz, getClientJob, maxOffers, repLevel, repPayMult, type BizState, type ClientJob } from '../data/clients';
+import { CLIENT_JOBS, CLIENT_CARS_BY_REP, CLIENT_NAMES, ARRIVE_MS, LEAVE_MS, offerEvery, OFFER_TTL_MS, freshBiz, getClientJob, maxOffers, repLevel, repPayMult, type BizState, type ClientJob } from '../data/clients';
 import { PAINTS } from '../data/parts';
 import { social, type PublicGarage } from './social';
 import { validate, type Placed, type Rot } from './layout';
@@ -408,7 +408,7 @@ export class GameStore {
       if (next === 0) { next = now + 4000; changed = true; }
       else if (now >= next) {
         if (offers < maxOffers(repLevel(b.rep), b.recLevel ?? 1)) { const o = this.makeOffer(now); o.id = `k${nextId++}`; jobs = [...jobs, o]; this.toast(`🚗 Nuevo cliente: ${o.client} · ${getClientJob(o.jobId).name}`); }
-        next = now + OFFER_EVERY_MS; changed = true;
+        next = now + offerEvery(this.bays().length, repLevel(b.rep)); changed = true;
       }
     }
     if (changed) this.setBiz({ jobs, nextOfferAt: next, nextId });

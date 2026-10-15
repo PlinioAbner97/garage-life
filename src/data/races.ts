@@ -18,10 +18,10 @@ export interface RaceOpp {
 }
 export interface RaceTier { id: string; name: string; icon: string; minLevel: number; fee: number; prize: number; xp: number; opp: { name: string; model: string; paint: string; mul: number } }
 export const RACE_TIERS: RaceTier[] = [
-  { id: 'street', name: 'Callejera', icon: '🌙', minLevel: 1, fee: 100, prize: 300, xp: 40, opp: { name: 'Rival callejero', model: 'falcon-gt', paint: 'black', mul: 0.9 } },
+  { id: 'street', name: 'Callejera', icon: '🌙', minLevel: 1, fee: 100, prize: 400, xp: 40, opp: { name: 'Rival callejero', model: 'falcon-gt', paint: 'black', mul: 0.9 } },
   { id: 'amateur', name: 'Amateur', icon: '🏁', minLevel: 3, fee: 400, prize: 1100, xp: 100, opp: { name: 'Piloto amateur', model: 'kobalt-22', paint: 'blue', mul: 0.95 } },
   { id: 'pro', name: 'Profesional', icon: '🏆', minLevel: 5, fee: 1200, prize: 3400, xp: 220, opp: { name: 'Piloto pro', model: 'akane-rs', paint: 'red', mul: 1 } },
-  { id: 'elite', name: 'Élite', icon: '👑', minLevel: 7, fee: 3000, prize: 9000, xp: 450, opp: { name: 'Campeón', model: 'nami-34', paint: 'white', mul: 1 } },
+  { id: 'elite', name: 'Élite', icon: '👑', minLevel: 7, fee: 3500, prize: 7500, xp: 450, opp: { name: 'Campeón', model: 'nami-34', paint: 'white', mul: 1 } },
 ];
 export const FRIEND_MIN_LEVEL = 2;
 export const aiOpp = (t: RaceTier): RaceOpp => ({ kind: 'ai', tier: t.id, name: t.opp.name, model: t.opp.model, paint: t.opp.paint, rim: 'stock', mul: t.opp.mul, fee: t.fee, prize: t.prize, xp: t.xp });
@@ -35,14 +35,14 @@ export const bestCar = <T extends { model: string }>(cars: T[]): T | undefined =
 export interface RaceResult { myT: number; oppT: number; win: boolean; reaction: number; perfects: number; forfeit?: boolean }
 export interface RaceState { id: number; carId: string; model: string; paint: string; rim: string; opp: RaceOpp; startedAt: number; result?: RaceResult }
 
-/** Probabilidad orientativa de ganar contra un rival, suponiendo un jugador "bueno" (error ~0.03). Determinista. */
+/** Probabilidad orientativa de ganar contra un rival, suponiendo un jugador promedio (error ~0.05). Determinista. */
 const cache = new Map<string, number>();
 export function winChance(myModel: string, opp: RaceOpp): number {
   const key = `${myModel}|${opp.model}|${opp.mul}|${opp.tier ?? 'friend'}`; const hit = cache.get(key); if (hit !== undefined) return hit;
   let st = 987654321; const rnd = () => ((st = (st * 1664525 + 1013904223) >>> 0) / 4294967296);
   let w = 0; const N = 80;
   for (let i = 0; i < N; i++) {
-    const me = runDriver(perf(myModel), makeDriver(0.03, rnd), 1 / 30), ai = runDriver(perf(opp.model) * opp.mul, makeDriver(SKILL[opp.tier ?? 'friend'], rnd), 1 / 30);
+    const me = runDriver(perf(myModel), makeDriver(0.05, rnd), 1 / 30), ai = runDriver(perf(opp.model) * opp.mul, makeDriver(SKILL[opp.tier ?? 'friend'], rnd), 1 / 30);
     if (me.time < ai.time) w++;
   }
   const r = w / N; cache.set(key, r); return r;

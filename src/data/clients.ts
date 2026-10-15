@@ -26,14 +26,16 @@ export const REP_LEVELS = [
 ];
 export const repLevel = (pts: number) => { let l = 1; REP_LEVELS.forEach((r, i) => { if (pts >= r.from) l = i + 1; }); return l; };
 /** pago extra por reputación (mejores clientes) */
-export const repPayMult = (lvl: number) => 1 + 0.06 * (lvl - 1);
+export const repPayMult = (lvl: number) => 1 + 0.1 * (lvl - 1);
 
 /** Autos de clientes por reputación (ids de vehicles.ts): cuanto más reputación, más exclusivos. */
 export const CLIENT_CARS_BY_REP: string[][] = [['falcon-gt'], ['falcon-gt', 'kobalt-22'], ['kobalt-22', 'akane-rs'], ['akane-rs', 'nami-34'], ['nami-34', 'shirogane-x']];
 export const CLIENT_NAMES = ['Carlos', 'Marta', 'Diego', 'Lucía', 'Andrés', 'Valeria', 'Tomás', 'Camila', 'Mateo', 'Sofía', 'Bruno', 'Elena', 'Hugo', 'Paula', 'Iván', 'Noelia', 'Rafa', 'Daniela'];
 
 /** Ritmo de llegada de solicitudes. maxOffers crece con la reputación y con la mejora de la recepción (recLevel 1..3, futuro). */
-export const OFFER_EVERY_MS = 40_000;
+export const OFFER_EVERY_MS = 36_000;
+/** Cada cuánto llega una solicitud: más bahías y más reputación = más clientes (si no, las bahías extra no servirían). */
+export const offerEvery = (bays: number, rep: number) => Math.round(OFFER_EVERY_MS / (0.6 + 0.4 * Math.max(1, bays)) / (1 + 0.1 * (rep - 1)));
 export const OFFER_TTL_MS = 10 * 60_000;
 export const maxOffers = (rep: number, recLevel = 1) => 2 + Math.floor(rep / 2) + (recLevel - 1);
 export const ARRIVE_MS = 9_000;

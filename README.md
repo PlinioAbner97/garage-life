@@ -98,3 +98,4 @@ Al crear cuenta, si ya había una partida local en ese dispositivo se sube a la 
 - Los autos propios **ya no dan dinero**: el ingreso viene de **clientes** (reparaciones en bahías) y de **carreras**. Los autos propios sirven para competir y lucir.
 - Todos empiezan con la Recepción y una Bahía de Servicio ya instaladas (partidas anteriores las reciben una vez, `withStarter` en `store.ts`). Bahías extra: $5.000 (nivel 3).
 - Los trabajos viejos en curso se pueden cobrar, pero ya no se pueden iniciar nuevos.
+- **Balance (aprox.):** una bahía rinde ~$450-560/min; las solicitudes llegan más rápido con más bahías y reputación (`offerEvery` en `clients.ts`). Carros: $9k/$16k/$24k/$32k ≈ 20-70 min de juego. Carreras: premio ≈ 1-2× el ingreso de clientes de esa etapa; categorías superiores exigen mejores carros (`RACE_POWER`).
