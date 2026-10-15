@@ -12,31 +12,26 @@ await pg.waitForTimeout(800);
 await ev(() => { __gl.setSave({ money: 100000, level: 12 }); });
 const slotsBefore = await ev(() => JSON.stringify(__gl.getSnapshot().save.slotsUnlocked));
 const carsBefore = await ev(() => JSON.stringify(__gl.getSnapshot().save.cars));
-// 1
-await ev(() => { __gl.buyItem('reception'); });
-T('1 comprar recepción -> inventario', await ev(() => __gl.getSnapshot().save.inventory.reception === 1));
-// 3 sin recepción instalada ni bahía
-T('3a sin recepción no hay ofertas', await ev(() => (__gl.getSnapshot().save.biz.jobs.length === 0)));
-// 2 colocar recepción
-await ev(() => { __gl.enterEdit(); __gl.editPlace('reception', -9, 10, 0); });
-const recDraft = await ev(() => __gl.getSnapshot().ui.edit.draft.length);
-await ev(() => { __gl.editSave(); });
-T('2 recepción colocada desbloquea Clientes', recDraft === 1 && await ev(() => __gl.hasEquip('reception')));
-await pg.waitForFunction(() => __gl.getSnapshot().save.biz.jobs.some((j) => j.state === 'offered'), null, { timeout: 20000 });
+// 1-2 kit inicial
+T('1 kit inicial: recepción y bahía instaladas', await ev(() => __gl.hasEquip('reception') && __gl.bays().length === 1));
+await pg.waitForFunction(() => __gl.getSnapshot().save.biz.jobs.some((j) => j.state === 'offered'), null, { timeout: 25000 });
+T('2 la pestaña Clientes recibe solicitudes', true);
+// 3 sin bahía no se acepta
+await ev(() => { __gl.enterEdit(); __gl.editStow(__gl.bays()[0].uid); __gl.editSave(); });
 const offer0 = await ev(() => __gl.getSnapshot().save.biz.jobs.find((j) => j.state === 'offered')?.id);
-T('3 sin bahía no se acepta', !!offer0 && !(await ev((id) => __gl.acceptClient(id), offer0)));
-// 4,5
+T('3 sin bahía no se acepta', !!offer0 && !(await ev((id) => __gl.acceptClient(id), offer0)) && (await ev(() => __gl.bays().length)) === 0);
+await ev(() => { __gl.enterEdit(); __gl.editPlace('service_bay', -4, 14, 0); __gl.editSave(); });
+await ev(() => { __gl.setSave({ money: 100000 }); });
 await ev(() => { __gl.buyItem('service_bay'); });
 await pg.waitForTimeout(900);
-T('4 comprar bahía', await ev(() => __gl.getSnapshot().save.inventory.service_bay === 1));
+T('4 comprar bahía extra', await ev(() => __gl.getSnapshot().save.inventory.service_bay === 2));
 const slot0 = await ev(() => __gl.getSnapshot().save.cars[0].slot);
 const SW = await ev(() => null);
 await ev(() => { __gl.enterEdit(); });
 const bad = await ev(() => __gl.editPlace('service_bay', -8, 14, 0)); // plaza 0 con auto propio
 T('6 no se instala sobre auto propio', bad === false);
-const good = await ev(() => __gl.editPlace('service_bay', -4, 14, 0));
 const slotB = await ev(() => __gl.getSnapshot().ui.edit.draft.find((p) => p.item === 'service_bay')?.slot);
-T('5 bahía en plaza libre desbloqueada (slot persistente)', good && slotB !== undefined, `slot=${slotB}`);
+T('5 bahía en plaza libre desbloqueada (slot persistente)', slotB === 1, `slot=${slotB}`);
 const dup = await ev(() => __gl.editPlace('service_bay', -4, 14, 0));
 T('5b una bahía por plaza', dup === false);
 await ev(() => { __gl.editSave(); });

@@ -1,4 +1,4 @@
-import { START_MONEY, SELL_RATIO, SLOT_COUNT, TOTAL_SLOTS, SLOT_UNLOCK_COST, getZone, xpForLevel } from '../data/config';
+import { START_MONEY, SELL_RATIO, SLOT_COUNT, TOTAL_SLOTS, SLOT_UNLOCK_COST, SLOT_WORLD, getZone, xpForLevel } from '../data/config';
 import { ITEMS, getItem, findFloor, findWall, FLOOR_FINISHES, WALL_FINISHES } from '../data/items';
 import { LOSS_XP_RATIO, RACE_CD_MS, FRIEND_MIN_LEVEL, RACE_TIERS, type RaceOpp, type RaceResult } from '../data/races';
 import { CLIENT_JOBS, CLIENT_CARS_BY_REP, CLIENT_NAMES, ARRIVE_MS, LEAVE_MS, OFFER_EVERY_MS, OFFER_TTL_MS, freshBiz, getClientJob, maxOffers, repLevel, repPayMult, type BizState, type ClientJob } from '../data/clients';
@@ -32,7 +32,7 @@ export interface Snapshot { save: SaveData; ui: UIState }
 const freshSave = (): SaveData => ({
   v: 1, money: START_MONEY, xp: 0, level: 1,
   cars: [{ id: 'c1', model: 'falcon-gt', paint: 'stock', rim: 'stock', slot: 0 }],
-  slotsUnlocked: 2, nextCarId: 2, jobs: {}, totalEarned: 0, jobsDone: 0, tutorialDone: false, zones: [], inventory: {}, placed: [], style: { floor: 'stock', wall: 'stock', owned: [] }, biz: freshBiz(),
+  slotsUnlocked: 2, nextCarId: 2, jobs: {}, totalEarned: 0, jobsDone: 0, tutorialDone: false, zones: [], inventory: { reception: 1, service_bay: 1 }, placed: [{ uid: 'starter-rec', item: 'reception', x: -9, y: 10, rot: 0 }, { uid: 'starter-bay', item: 'service_bay', x: SLOT_WORLD[1][0], y: SLOT_WORLD[1][1], rot: 0, slot: 1 }], style: { floor: 'stock', wall: 'stock', owned: [] }, biz: { ...freshBiz(), starter: true },
 });
 
 /** Store único: la escena Phaser y la UI React leen y escriben aquí. Sin estado duplicado. */
@@ -73,8 +73,21 @@ export class GameStore {
       const local = await migrateFrom.load();
       if (local) { try { await b.save(local); await migrateFrom.clear(); d = local; } catch { /* se queda local */ } }
     }
-    if (d) { this.save = { ...freshSave(), ...d, zones: d.zones ?? [], inventory: d.inventory ?? {}, placed: d.placed ?? [], style: { floor: 'stock', wall: 'stock', owned: [], ...d.style }, biz: { ...freshBiz(), ...d.biz } }; this.hasSave = true; }
+    if (d) { this.save = { ...freshSave(), ...d, zones: d.zones ?? [], inventory: d.inventory ?? {}, placed: d.placed ?? [], style: { floor: 'stock', wall: 'stock', owned: [], ...d.style }, biz: { ...freshBiz(), ...d.biz } }; this.save = this.withStarter(this.save); this.hasSave = true; }
     this.setUI({ loaded: true });
+  }
+  /** Las partidas anteriores reciben una vez la Recepción y una Bahía (el dinero ahora viene de los clientes y las carreras). */
+  private withStarter(sv: SaveData): SaveData {
+    if (sv.biz?.starter) return sv;
+    const inv = { ...(sv.inventory ?? {}) }; let placed = [...(sv.placed ?? [])];
+    const grant = (id: string, spots: [number, number][]) => {
+      if ((inv[id] ?? 0) >= 1 || placed.some((p) => p.item === id)) return;
+      inv[id] = (inv[id] ?? 0) + 1; const def = getItem(id)!;
+      for (const [x, y] of spots) { const v = validate(def, x, y, 0, sv, placed, this.getDef); if (v.ok) { placed = [...placed, { uid: `starter-${id}`, item: id, x: v.x, y: v.y, rot: 0, ...(v.slot !== undefined ? { slot: v.slot } : {}) }]; return; } }
+    };
+    grant('reception', [[-9, 10], [9, 10], [-9, 19.5], [9, 19.5]]);
+    grant('service_bay', SLOT_WORLD.slice(0, 5).map((q) => [q[0], q[1]] as [number, number]));
+    return { ...sv, inventory: inv, placed, biz: { ...(sv.biz ?? freshBiz()), starter: true } };
   }
   /** Guarda de inmediato (al cerrar o ocultar la app). */
   flush() { this.pendingFlush(); }
@@ -328,7 +341,7 @@ export class GameStore {
     const b = this.getBiz();
     this.setBiz({ jobs: b.jobs.map((x) => (x.id === id ? { ...x, claimed: true, state: 'leaving', leaveAt: Date.now() } : x)), done: b.done + 1, rep: b.rep + getClientJob(j.jobId).repPts });
     const before = repLevel(b.rep), after = repLevel(b.rep + getClientJob(j.jobId).repPts);
-    this.grant(j.pay, j.xp);
+    this.grant(j.pay, j.xp); if (!this.save.tutorialDone) this.setSave({ tutorialDone: true });
     this.toast(`${getClientJob(j.jobId).icon} ${j.client}: +$${j.pay.toLocaleString('es')}  +${j.xp} XP`);
     if (after > before) this.toast(`¡Tu taller subió de reputación!`, 'level');
     return true;

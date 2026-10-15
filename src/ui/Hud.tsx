@@ -26,8 +26,14 @@ export function Hud() {
     store.openPanel('customize');
   };
 
-  const hint = !save.tutorialDone && save.jobsDone === 0
-    ? (car ? (job ? '⏳ Espera a que termine y toca el auto para cobrar' : '🔧 Abre «Trabajos» y elige un servicio para ganar dinero') : '👆 Toca tu Falcon GT para seleccionarlo')
+  const cj = save.biz?.jobs ?? [];
+  const hint = !save.tutorialDone
+    ? (cj.some((j) => j.state === 'ready') ? '💰 Trabajo terminado: toca el auto del cliente para cobrar'
+      : cj.some((j) => j.state === 'repairing') ? '⏳ Reparando… espera a que termine'
+      : cj.some((j) => j.state === 'waiting') ? '🔧 El cliente llegó: toca su auto para repararlo'
+      : cj.some((j) => j.state === 'arriving') ? '🚗 Tu cliente viene en camino a la bahía'
+      : cj.some((j) => j.state === 'offered') ? '🧾 Llegó un cliente: abre «Trabajos» y acepta su solicitud'
+      : '⏳ Pronto llegará tu primer cliente…')
     : null;
 
   return (
@@ -65,12 +71,12 @@ export function Hud() {
         <div className="carcard">
           <div>
             <b>{getModel(car.model).name}</b>
-            <small>{job ? (job.done || ui.now >= job.endsAt ? '✅ Trabajo listo' : `${getJob(job.jobId).icon} ${getJob(job.jobId).name} · ${fmtTime(job.endsAt - ui.now)}`) : 'Disponible'}</small>
+            <small>{job ? (job.done || ui.now >= job.endsAt ? '✅ Trabajo listo' : `${getJob(job.jobId).icon} ${getJob(job.jobId).name} · ${fmtTime(job.endsAt - ui.now)}`) : 'Listo para competir'}</small>
           </div>
           <div className="row">
             {job && (job.done || ui.now >= job.endsAt)
               ? <button className="btn primary" onClick={() => store.collectJob(car.id)}>💰 Cobrar</button>
-              : <button className="btn primary" disabled={!!job} onClick={() => store.openPanel('jobs')}>🔧 Trabajo</button>}
+              : <button className="btn primary" disabled={!!job} onClick={() => store.openPanel('races')}>🏁 Correr</button>}
             <button className="btn" onClick={customize}>🎨 Estilo</button>
             <button className="btn ghost" onClick={() => bridge.scene?.focusCar(car.id)}>🔍</button>
           </div>

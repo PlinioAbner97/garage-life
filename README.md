@@ -93,3 +93,8 @@ Al crear cuenta, si ya había una partida local en ese dispositivo se sube a la 
 - El jugador y la IA usan el mismo motor (`drag.ts`); la IA tiene error de habilidad por categoría (`SKILL`). Vista en canvas: `src/ui/dragView.ts`.
 - Al terminar se guarda el resultado y se cobra una sola vez. Si recargas a mitad de carrera, se cuenta como abandonada.
 - Pruebas: `node tools/test_race.mjs`. Limitación: validación del lado del cliente; para premios competitivos reales hará falta una función de Supabase.
+
+## Economía (cambio de diseño)
+- Los autos propios **ya no dan dinero**: el ingreso viene de **clientes** (reparaciones en bahías) y de **carreras**. Los autos propios sirven para competir y lucir.
+- Todos empiezan con la Recepción y una Bahía de Servicio ya instaladas (partidas anteriores las reciben una vez, `withStarter` en `store.ts`). Bahías extra: $5.000 (nivel 3).
+- Los trabajos viejos en curso se pueden cobrar, pero ya no se pueden iniciar nuevos.

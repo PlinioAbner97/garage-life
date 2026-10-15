@@ -5,7 +5,7 @@ import { store } from '../core/store';
 import { FUTURE_ZONES, SELL_RATIO, SLOT_COUNT, SLOT_UNLOCK_COST, TOTAL_SLOTS, ZONES, getZone } from '../data/config';
 import { hasZone, isSlotUnlocked } from '../core/save';
 import { VEHICLES, getModel } from '../data/vehicles';
-import { JOBS, getJob } from '../data/jobs';
+import { getJob } from '../data/jobs';
 import { PAINTS, RIMS, findPaint, findRim, type ColorPart } from '../data/parts';
 import { bridge } from '../engine/bridge';
 import { ITEMS, CATEGORIES, FLOOR_FINISHES, WALL_FINISHES, getItem, type ItemDef, type ItemCategory } from '../data/items';
@@ -305,15 +305,26 @@ function FriendsPanel() {
 }
 
 function JobsPanel() {
-  const { ui } = useGame();
-  const tab = ui.jobsTab ?? 'mine';
+  const { save, ui } = useGame();
+  const old = save.cars.filter((c) => save.jobs[c.id]);
   return (
     <>
-      <div className="tabs">
-        <button className={tab === 'mine' ? 'on' : ''} onClick={() => store.setJobsTab('mine')}>🚗 Mis carros</button>
-        <button className={tab === 'clients' ? 'on' : ''} onClick={() => store.setJobsTab('clients')}>🧾 Clientes</button>
-      </div>
-      {tab === 'mine' ? <MyCarsJobs /> : <ClientsPanel />}
+      <p className="muted">Tu dinero viene de los <b>clientes</b> que reparas aquí y de las <b>carreras</b> 🏁. Tus propios autos son para competir y lucir.</p>
+      {old.length > 0 && (<>
+        <h3>Trabajos anteriores</h3>
+        <div className="list">
+          {old.map((c) => {
+            const j = save.jobs[c.id]; const def = getJob(j.jobId); const done = j.done || ui.now >= j.endsAt;
+            return (
+              <div key={c.id} className="card">
+                <div className="grow"><b>{def.icon} {def.name}</b><small>{getModel(c.model).name}</small></div>
+                <div className="col">{done ? <button className="btn primary" onClick={() => store.collectJob(c.id)}>💰 Cobrar</button> : <span className="timer">{fmtTime(j.endsAt - ui.now)}</span>}</div>
+              </div>
+            );
+          })}
+        </div>
+      </>)}
+      <ClientsPanel />
     </>
   );
 }
@@ -380,55 +391,6 @@ function ClientCard({ j, now }: { j: ClientJob; now: number }) {
   );
 }
 
-function MyCarsJobs() {
-  const { save, ui } = useGame();
-  const idle = save.cars.filter((c) => !save.jobs[c.id]);
-  const [carId, setCarId] = useState<string | null>(ui.selectedId && !save.jobs[ui.selectedId] ? ui.selectedId : idle[0]?.id ?? null);
-  const car = save.cars.find((c) => c.id === carId && !save.jobs[c.id]) ?? idle[0];
-  const active = save.cars.filter((c) => save.jobs[c.id]);
-  return (
-    <>
-      {active.length > 0 && (<>
-        <h3>En curso</h3>
-        <div className="list">
-          {active.map((c) => {
-            const j = save.jobs[c.id]; const def = getJob(j.jobId); const done = j.done || ui.now >= j.endsAt;
-            return (
-              <div key={c.id} className="card">
-                <div className="grow"><b>{def.icon} {def.name}</b><small>{getModel(c.model).name}</small>
-                  <div className="mini"><i style={{ width: `${done ? 100 : Math.min(100, (1 - (j.endsAt - ui.now) / (def.seconds * 1000)) * 100)}%` }} /></div></div>
-                <div className="col">{done ? <button className="btn primary" onClick={() => store.collectJob(c.id)}>💰 Cobrar</button> : <span className="timer">{fmtTime(j.endsAt - ui.now)}</span>}</div>
-              </div>
-            );
-          })}
-        </div>
-      </>)}
-      <h3>Nuevo trabajo</h3>
-      {car ? (<>
-        <label className="field">Auto
-          <select value={car.id} onChange={(e) => setCarId(e.target.value)}>
-            {idle.map((c) => <option key={c.id} value={c.id}>{getModel(c.model).name} · plaza {c.slot + 1}</option>)}
-          </select>
-        </label>
-        <div className="list">
-          {JOBS.map((j) => {
-            const locked = save.level < j.minLevel; const pay = Math.round(j.pay * getModel(car.model).payBonus);
-            return (
-              <div key={j.id} className={`card ${locked ? 'locked' : ''}`}>
-                <div className="grow"><b>{j.icon} {j.name}</b><small>⏱ {fmtTime(j.seconds * 1000)} · +{j.xp} XP</small></div>
-                <div className="col">
-                  <button className="btn primary" disabled={locked} onClick={() => { if (store.startJob(car.id, j.id)) { store.dismissTutorial(); store.openPanel(null); bridge.scene?.focusCar(car.id); } }}>
-                    {locked ? `🔒 Nivel ${j.minLevel}` : `$${fmt(pay)}`}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </>) : <p className="muted">Todos tus autos están ocupados. Compra otro en la tienda o espera a que terminen.</p>}
-    </>
-  );
-}
 
 function Swatch({ p, on, locked, onPick }: { p: ColorPart; on: boolean; locked: boolean; onPick: () => void }) {
   return (
@@ -472,7 +434,7 @@ function SettingsPanel() {
     <>
       <div className="stats">
         <div><b>${fmt(save.totalEarned)}</b><small>ganado en total</small></div>
-        <div><b>{save.jobsDone}</b><small>trabajos hechos</small></div>
+        <div><b>{save.jobsDone + (save.biz?.done ?? 0)}</b><small>trabajos hechos</small></div>
         <div><b>{save.cars.length}</b><small>autos</small></div>
       </div>
       <div className="list">

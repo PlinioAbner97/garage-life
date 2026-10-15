@@ -57,5 +57,5 @@ export interface ClientJob {
   offeredAt: number; acceptedAt?: number; startedAt?: number; endsAt?: number; leaveAt?: number;
   claimed?: boolean;
 }
-export interface BizState { rep: number; done: number; jobs: ClientJob[]; nextId: number; nextOfferAt: number; recLevel?: number }
+export interface BizState { rep: number; done: number; jobs: ClientJob[]; nextId: number; nextOfferAt: number; recLevel?: number; starter?: boolean }
 export const freshBiz = (): BizState => ({ rep: 0, done: 0, jobs: [], nextId: 1, nextOfferAt: 0, recLevel: 1 });
