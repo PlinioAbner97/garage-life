@@ -1,6 +1,6 @@
 import { START_MONEY, SELL_RATIO, SLOT_COUNT, TOTAL_SLOTS, SLOT_UNLOCK_COST, getZone, xpForLevel } from '../data/config';
 import { ITEMS, getItem, findFloor, findWall, FLOOR_FINISHES, WALL_FINISHES } from '../data/items';
-import { LOSS_XP_RATIO, RACE_CD_MS, RACE_COUNTDOWN_MS, FRIEND_MIN_LEVEL, RACE_TIERS, raceEndsAt, simulate, type RaceOpp } from '../data/races';
+import { LOSS_XP_RATIO, RACE_CD_MS, FRIEND_MIN_LEVEL, RACE_TIERS, type RaceOpp, type RaceResult } from '../data/races';
 import { CLIENT_JOBS, CLIENT_CARS_BY_REP, CLIENT_NAMES, ARRIVE_MS, LEAVE_MS, OFFER_EVERY_MS, OFFER_TTL_MS, freshBiz, getClientJob, maxOffers, repLevel, repPayMult, type BizState, type ClientJob } from '../data/clients';
 import { PAINTS } from '../data/parts';
 import { social, type PublicGarage } from './social';
@@ -345,18 +345,24 @@ export class GameStore {
     if (this.save.jobs[carId]) { this.toast('Ese auto está en un trabajo', 'bad'); return false; }
     if (this.raceCooldown(carId) > 0) { this.toast('Ese auto está descansando entre carreras', 'bad'); return false; }
     if (this.save.money < opp.fee) { this.toast('No te alcanza para la cuota de inscripción', 'bad'); return false; }
-    const r = simulate(car.model, opp);
     const id = (this.save.raceCount ?? 0) + 1;
-    this.setSave({ money: this.save.money - opp.fee, raceCount: id, race: { id, carId, model: car.model, paint: car.paint, rim: car.rim, opp, myT: r.myT, oppT: r.oppT, startedAt: Date.now(), win: r.win } });
+    this.setSave({ money: this.save.money - opp.fee, raceCount: id, race: { id, carId, model: car.model, paint: car.paint, rim: car.rim, opp, startedAt: Date.now() } });
     return true;
   }
   /** Cobra la carrera terminada. El estado se borra en la misma operación: no se puede cobrar dos veces. */
+  /** La carrera interactiva terminó: se guarda el resultado (una sola vez). */
+  finishRace(id: number, res: RaceResult): boolean {
+    const r = this.save.race; if (!r || r.id !== id || r.result) return false;
+    this.setSave({ race: { ...r, result: { ...res, myT: Math.round(res.myT * 1000) / 1000, oppT: Math.round(res.oppT * 1000) / 1000 } } });
+    return true;
+  }
   claimRace(): boolean {
-    const r = this.save.race; if (!r || Date.now() < raceEndsAt(r)) return false;
+    const r = this.save.race; if (!r || !r.result) return false;
+    const win = r.result.win;
     const cd = { ...(this.save.raceCd ?? {}), [r.carId]: Date.now() + RACE_CD_MS };
-    this.setSave({ race: undefined, raceCd: cd, raceWins: (this.save.raceWins ?? 0) + (r.win ? 1 : 0) });
-    if (r.win) { this.grant(r.opp.prize, r.opp.xp); this.toast(`🏁 ¡Ganaste! +$${r.opp.prize.toLocaleString('es')}  +${r.opp.xp} XP`, 'level'); }
-    else { const xp = Math.round(r.opp.xp * LOSS_XP_RATIO); this.grant(0, xp); this.toast(`Perdiste la carrera · +${xp} XP`, 'bad'); }
+    this.setSave({ race: undefined, raceCd: cd, raceWins: (this.save.raceWins ?? 0) + (win ? 1 : 0) });
+    if (win) { this.grant(r.opp.prize, r.opp.xp); this.toast(`🏁 ¡Ganaste! +$${r.opp.prize.toLocaleString('es')}  +${r.opp.xp} XP`, 'level'); }
+    else { const xp = r.result.forfeit ? 0 : Math.round(r.opp.xp * LOSS_XP_RATIO); this.grant(0, xp); this.toast(`Perdiste la carrera · +${xp} XP`, 'bad'); }
     return true;
   }
   setJobsTab(t: 'mine' | 'clients') { this.setUI({ jobsTab: t }); }

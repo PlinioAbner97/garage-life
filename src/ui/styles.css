@@ -129,12 +129,14 @@ select { font: inherit; padding: 10px; border-radius: 10px; background: var(--pa
 .icon.fr { position: relative; } .icon.fr em { position: absolute; top: -4px; right: -4px; background: var(--bad); color: #fff; font-style: normal; border-radius: 10px; min-width: 18px; height: 18px; font-size: 11px; display: grid; place-items: center; }
 
 /* carreras */
-.raceov { position: fixed; inset: 0; z-index: 60; background: radial-gradient(ellipse at 50% 40%, #16203f, #070a16 75%); display: flex; flex-direction: column; align-items: center; }
-.racehead { margin-top: calc(18px + env(safe-area-inset-top)); font-size: 22px; display: flex; gap: 10px; align-items: baseline; } .racehead span { color: var(--muted); font-size: 15px; }
-.racetrack { position: relative; flex: 1; width: 100%; overflow: hidden; }
-.racetrack .road { position: absolute; left: 50%; top: 50%; transform-origin: 50% 50%; background: repeating-linear-gradient(90deg, #2b3350 0 38px, #333c5c 38px 76px); border: 3px solid #ffb020; box-shadow: 0 0 40px rgba(0,0,0,.6); }
-.racetrack .finish { position: absolute; height: 18px; transform-origin: 50% 50%; background: repeating-linear-gradient(90deg, #fff 0 14px, #111 14px 28px); }
-.rcar { position: absolute; width: 230px; transform: translate(-50%, -62%); pointer-events: none; filter: drop-shadow(0 12px 10px rgba(0,0,0,.5)); }
-.racecd { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); font-size: 96px; font-weight: 800; color: #ffb020; text-shadow: 0 6px 24px rgba(0,0,0,.7); z-index: 5; } .racecd.go { color: #38e08a; }
-.racefoot { min-height: 150px; padding: 8px 16px calc(24px + env(safe-area-inset-bottom)); text-align: center; }
-.raceres h2 { margin: 0 0 4px; font-size: 30px; } .raceres p { margin: 0 0 12px; color: var(--muted); }
+.raceov { position: fixed; inset: 0; z-index: 60; background: #070a16; touch-action: none; user-select: none; }
+.raceov.center { display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, #16203f, #070a16 75%); }
+.racecv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.racectl { position: absolute; right: 14px; bottom: calc(18px + env(safe-area-inset-bottom)); display: flex; gap: 12px; align-items: flex-end; pointer-events: none; }
+.racectl button { pointer-events: auto; border-radius: 50%; border: 3px solid rgba(255,255,255,.25); color: #fff; font-weight: 800; display: grid; place-items: center; align-content: center; font-family: inherit; }
+.racectl small { font-size: 10px; font-weight: 600; opacity: .8; }
+.rshift { width: 128px; height: 128px; font-size: 26px; background: radial-gradient(circle at 35% 30%, #ffd24a, #e8860a); box-shadow: 0 8px 28px rgba(255,160,20,.45); }
+.rshift:active { transform: scale(.94); }
+.rnitro { width: 84px; height: 84px; font-size: 28px; background: radial-gradient(circle at 35% 30%, #6fd6ff, #1670d8); box-shadow: 0 8px 24px rgba(40,140,255,.45); }
+.rnitro:disabled { filter: grayscale(1) brightness(.5); box-shadow: none; }
+.raceres { text-align: center; max-width: 380px; padding: 0 20px; } .raceres h2 { margin: 0 0 8px; font-size: 32px; } .raceres p { margin: 0 0 8px; color: var(--muted); } .raceres .btn { margin-top: 10px; }

@@ -1,16 +1,15 @@
 // Carreras: duelos simulados contra la IA o contra el mejor auto del garaje de un amigo.
 // Todo es configurable aquí. El resultado se calcula al empezar y se guarda: recargar no lo cambia.
-import { getModel } from './vehicles';
+import { makeDriver, runDriver } from './drag';
 
-export const RACE_CD_MS = 180000;      // enfriamiento por auto
-export const RACE_COUNTDOWN_MS = 3000; // cuenta atrás antes de arrancar
-export const RACE_NOISE = 0.1;         // azar: ±10 % en el tiempo
+export const RACE_CD_MS = 60000;       // enfriamiento por auto
 export const LOSS_XP_RATIO = 0.25;     // XP de consolación al perder
 
-/** Rendimiento de un auto (0-100) a partir de sus stats. */
-export const perf = (model: string) => { const s = getModel(model).stats; return 0.5 * s.potencia + 0.35 * s.agarre + 0.15 * s.estilo; };
-/** Tiempo base (s) de la pista corta para un rendimiento dado. */
-export const baseTime = (p: number) => 8 * Math.pow(80 / p, 1.2);
+/** Rendimiento de arranque (0-100): sube con el precio del auto. Ver accelOf() en drag.ts. */
+export const RACE_POWER: Record<string, number> = { 'falcon-gt': 56, 'kobalt-22': 68, 'akane-rs': 80, 'nami-34': 91, 'shirogane-x': 100 };
+export const perf = (model: string) => RACE_POWER[model] ?? 50;
+/** Error de habilidad de la IA por categoría (menor = más preciso). */
+export const SKILL: Record<string, number> = { street: 0.05, amateur: 0.035, pro: 0.022, elite: 0.012, friend: 0.03 };
 
 export interface RaceOpp {
   kind: 'ai' | 'friend'; name: string; model: string; paint: string; rim: string;
@@ -33,20 +32,18 @@ export const friendOpp = (username: string, c: { model: string; paint: string; r
 };
 export const bestCar = <T extends { model: string }>(cars: T[]): T | undefined => [...cars].sort((a, b) => perf(b.model) - perf(a.model))[0];
 
-export interface RaceState {
-  id: number; carId: string; model: string; paint: string; rim: string; opp: RaceOpp;
-  myT: number; oppT: number; startedAt: number; win: boolean;
-}
-export const raceEndsAt = (r: RaceState) => r.startedAt + RACE_COUNTDOWN_MS + Math.max(r.myT, r.oppT) * 1000;
-/** Resuelve la carrera (se llama una sola vez al empezar). */
-export function simulate(myModel: string, opp: RaceOpp, rnd: () => number = Math.random): { myT: number; oppT: number; win: boolean } {
-  const n = () => 1 + (rnd() * 2 - 1) * RACE_NOISE;
-  const myT = baseTime(perf(myModel)) * n(), oppT = baseTime(perf(opp.model) * opp.mul) * n();
-  return { myT, oppT, win: myT < oppT };
-}
-/** Odds orientativas (Monte Carlo corto, determinista) para mostrar en la UI. */
+export interface RaceResult { myT: number; oppT: number; win: boolean; reaction: number; perfects: number; forfeit?: boolean }
+export interface RaceState { id: number; carId: string; model: string; paint: string; rim: string; opp: RaceOpp; startedAt: number; result?: RaceResult }
+
+/** Probabilidad orientativa de ganar contra un rival, suponiendo un jugador "bueno" (error ~0.03). Determinista. */
+const cache = new Map<string, number>();
 export function winChance(myModel: string, opp: RaceOpp): number {
-  let s = 12345; const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
-  let w = 0; const N = 400; for (let i = 0; i < N; i++) if (simulate(myModel, opp, rnd).win) w++;
-  return w / N;
+  const key = `${myModel}|${opp.model}|${opp.mul}|${opp.tier ?? 'friend'}`; const hit = cache.get(key); if (hit !== undefined) return hit;
+  let st = 987654321; const rnd = () => ((st = (st * 1664525 + 1013904223) >>> 0) / 4294967296);
+  let w = 0; const N = 80;
+  for (let i = 0; i < N; i++) {
+    const me = runDriver(perf(myModel), makeDriver(0.03, rnd), 1 / 30), ai = runDriver(perf(opp.model) * opp.mul, makeDriver(SKILL[opp.tier ?? 'friend'], rnd), 1 / 30);
+    if (me.time < ai.time) w++;
+  }
+  const r = w / N; cache.set(key, r); return r;
 }

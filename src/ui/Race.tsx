@@ -1,58 +1,65 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { store } from '../core/store';
 import { social } from '../core/social';
 import { useSocial } from './useSocial';
 import { useGame, fmt, fmtTime } from './hooks';
 import { getModel } from '../data/vehicles';
 import { bridge } from '../engine/bridge';
-import { FRIEND_MIN_LEVEL, RACE_COUNTDOWN_MS, RACE_TIERS, aiOpp, bestCar, friendOpp, perf, raceEndsAt, winChance, type RaceOpp, type RaceState } from '../data/races';
+import { DragView } from './dragView';
+import { FRIEND_MIN_LEVEL, LOSS_XP_RATIO, RACE_TIERS, aiOpp, bestCar, friendOpp, perf, winChance, type RaceOpp, type RaceResult, type RaceState } from '../data/races';
 
-const AX = { x: -0.86, y: 0.51 };   // eje de la pista en pantalla (hacia -Y de Blender)
-const LN = { x: 0.94, y: 0.34 };    // eje de los carriles (hacia +X)
-
-/** Animación de la carrera: se calcula del reloj (startedAt), así sobrevive a recargas. */
+const BOOT_AT = Date.now();
+/** Overlay de carrera: arrancón interactivo (live), o pantalla de resultado / carrera interrumpida si se recargó la página. */
 export function RaceOverlay() {
   const { save } = useGame();
   const r = save.race;
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => { if (!r) return; const t = window.setInterval(() => setNow(Date.now()), 50); return () => window.clearInterval(t); }, [r?.id]);
+  const seen = useRef<{ id: number; live: boolean } | null>(null);
+  if (r && seen.current?.id !== r.id) seen.current = { id: r.id, live: r.startedAt >= BOOT_AT };
   if (!r) return null;
-  return <RaceView r={r} now={now} />;
+  if (r.result) return <ResultView r={r} res={r.result} />;
+  if (!seen.current?.live) return (
+    <div className="raceov center"><div className="raceres"><h2>Carrera interrumpida</h2><p>Cerraste o recargaste el juego durante la carrera. Se cuenta como abandonada.</p>
+      <button className="btn primary" onClick={() => { store.finishRace(r.id, { myT: 99, oppT: 0, win: false, reaction: 0, perfects: 0, forfeit: true }); store.claimRace(); }}>Continuar</button></div></div>
+  );
+  return <LiveRace key={r.id} r={r} />;
 }
 
-function RaceView({ r, now }: { r: RaceState; now: number }) {
-  const t0 = r.startedAt + RACE_COUNTDOWN_MS, t = (now - t0) / 1000;
-  const frac = (T: number) => { const u = Math.min(1, Math.max(0, t / T)); return u * (1.15 - 0.15 * u); };
-  const done = now >= raceEndsAt(r);
-  const L = Math.min(window.innerWidth * 0.78, 760), W = 170;
-  const S = { x: -AX.x * L * 0.5, y: -AX.y * L * 0.5 }, E = { x: AX.x * L * 0.5, y: AX.y * L * 0.5 };
-  const at = (f: number, lane: number) => ({ x: S.x + (E.x - S.x) * f + LN.x * lane, y: S.y + (E.y - S.y) * f + LN.y * lane });
-  const me = at(frac(r.myT), 38), op = at(frac(r.oppT), -38);
-  const cd = Math.ceil((t0 - now) / 1000);
-  const img = (m: string, p: string, rm: string) => bridge.scene?.carImage(m, p, rm) || undefined;
-  const carStyle = (p: { x: number; y: number }, front: boolean) => ({ left: `calc(50% + ${p.x}px)`, top: `calc(50% + ${p.y}px)`, zIndex: front ? 3 : 2 });
-  const myDone = t >= r.myT, opDone = t >= r.oppT;
+function ResultView({ r, res }: { r: RaceState; res: RaceResult }) {
   return (
-    <div className="raceov">
-      <div className="racehead"><b>🏁 Tú</b> <span>vs</span> <b>{r.opp.name}</b></div>
-      <div className="racetrack">
-        <div className="road" style={{ width: L, height: W, marginLeft: -L / 2, marginTop: -W / 2, transform: `matrix(${AX.x},${AX.y},${LN.x},${LN.y},0,0)` }} />
-        <div className="finish" style={{ left: `calc(50% + ${E.x}px)`, top: `calc(50% + ${E.y}px)`, width: W, marginLeft: -W / 2, marginTop: -9, transform: `matrix(${LN.x},${LN.y},${AX.x},${AX.y},0,0)` }} />
-        <img className="rcar" alt="" src={img(r.opp.model, r.opp.paint, r.opp.rim)} style={carStyle(op, op.y > me.y)} />
-        <img className="rcar" alt="" src={img(r.model, r.paint, r.rim)} style={carStyle(me, me.y >= op.y)} />
-        {cd > 0 && <div className="racecd">{cd}</div>}
-        {cd <= 0 && t < 0.8 && <div className="racecd go">¡YA!</div>}
-      </div>
-      <div className="racefoot">
-        {!done && cd <= 0 && <p className="muted">{myDone ? 'Cruzaste la meta…' : opDone ? 'Te ganaron en la meta…' : 'Corriendo…'}</p>}
-        {!done && cd > 0 && <p className="muted">Prepárate · {getModel(r.model).name} vs {getModel(r.opp.model).name}</p>}
-        {done && (
-          <div className="raceres">
-            <h2>{r.win ? '🏆 ¡Ganaste!' : 'Perdiste'}</h2>
-            <p>Tu tiempo {r.myT.toFixed(2)} s · rival {r.oppT.toFixed(2)} s</p>
-            <button className="btn primary" onClick={() => store.claimRace()}>{r.win ? `Cobrar $${fmt(r.opp.prize)} · +${r.opp.xp} XP` : `Continuar · +${Math.round(r.opp.xp * 0.25)} XP`}</button>
-          </div>
-        )}
+    <div className="raceov center"><div className="raceres">
+      <h2>{res.forfeit ? 'Carrera abandonada' : res.win ? '🏆 ¡Ganaste!' : 'Perdiste'}</h2>
+      {!res.forfeit && <><p>Tú <b>{res.myT.toFixed(2)} s</b> · {r.opp.name} <b>{res.oppT.toFixed(2)} s</b></p>
+        <p className="muted">Reacción {res.reaction.toFixed(2)} s · {res.perfects} cambios perfectos</p></>}
+      <button className="btn primary" onClick={() => store.claimRace()}>{res.win ? `Cobrar $${fmt(r.opp.prize)} · +${r.opp.xp} XP` : `Continuar${res.forfeit ? '' : ` · +${Math.round(r.opp.xp * LOSS_XP_RATIO)} XP`}`}</button>
+    </div></div>
+  );
+}
+
+function LiveRace({ r }: { r: RaceState }) {
+  const cv = useRef<HTMLCanvasElement>(null);
+  const view = useRef<DragView | null>(null);
+  const [phase, setPhase] = useState<'stage' | 'go' | 'run' | 'done'>('stage');
+  const [, force] = useState(0);
+  useEffect(() => {
+    const canvas = cv.current!;
+    const v = new DragView(canvas, { model: r.model, paint: r.paint, rim: r.rim }, r.opp, {
+      carImg: (c) => bridge.scene?.carImage(c.model, c.paint, c.rim) || undefined,
+      onFinish: (res) => { store.finishRace(r.id, res); },
+      onPhase: (p) => setPhase(p),
+    });
+    view.current = v;
+    const rs = () => v.resize(); window.addEventListener('resize', rs);
+    const key = (e: KeyboardEvent) => { if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); v.action(); force((n) => n + 1); } else if (e.code === 'KeyN') { v.useNitro(); force((n) => n + 1); } };
+    window.addEventListener('keydown', key);
+    return () => { v.destroy(); window.removeEventListener('resize', rs); window.removeEventListener('keydown', key); view.current = null; };
+  }, [r.id]);
+  const v = view.current;
+  return (
+    <div className="raceov live" onPointerDown={(e) => { if ((e.target as HTMLElement).closest('.rnitro')) return; view.current?.action(); force((n) => n + 1); }}>
+      <canvas ref={cv} className="racecv" />
+      <div className="racectl">
+        <button className="rnitro" disabled={!v?.nitroReady} onPointerDown={(e) => { e.stopPropagation(); view.current?.useNitro(); force((n) => n + 1); }}>🔥<small>NITRO</small></button>
+        <button className="rshift">{phase === 'stage' || phase === 'go' ? 'GO' : 'CAMBIO'}<small>toca · espacio</small></button>
       </div>
     </div>
   );

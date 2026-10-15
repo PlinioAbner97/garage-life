@@ -86,10 +86,10 @@ Al crear cuenta, si ya había una partida local en ese dispositivo se sube a la 
 - Pruebas: `npm run build && npx vite preview --port 4173` y `node tools/test_biz.mjs` (22 comprobaciones de los 16 casos).
 - Limitación: la validación es del lado del cliente (no hay servidor propio); para carreras/recompensas competitivas habrá que validar con una función de Supabase.
 
-## Carreras
-- Panel 🏁 *Carreras*: duelos simulados contra la IA (4 categorías por nivel) o contra el mejor auto del garaje público de un amigo (nivel 2+; funciona aunque el amigo no esté conectado).
-- Inscripción + premio + XP; al perder solo XP de consolación (25 %). Enfriamiento de 3 min por auto. Todo configurable en `src/data/races.ts`.
-- El resultado (tiempos y ganador) se calcula al inscribirse y se guarda; la animación se dibuja desde `startedAt`, así que recargar no lo cambia. Cobrar borra la carrera en la misma operación (no se cobra dos veces).
-- Rendimiento = 0.5·potencia + 0.35·agarre + 0.15·estilo, con ±10 % de azar.
-- Pruebas: `node tools/test_race.mjs`.
-- Limitación: igual que los clientes, la validación es del lado del cliente; para premios competitivos reales hace falta una función de Supabase.
+## Carreras (arrancones estilo CSR2)
+- Panel 🏁 *Carreras*: eliges tu auto y rival (IA por categorías de nivel, o el mejor auto de un amigo desde el nivel 2). Cuota de inscripción + premio + XP; al perder, 25 % del XP. Enfriamiento de 60 s por auto.
+- **Juego:** semáforo con luz verde → toca *GO* (reacción) → cambia de marcha en la zona verde del tacómetro (perfecto / bien / pronto / tarde) → un nitro por carrera. Salida en falso = +1 s. Teclado: Espacio/Enter y N.
+- **Más caro = más rápido:** `RACE_POWER` en `src/data/races.ts` (Falcon 56 … Shirogane 100) → `accelOf()` en `src/data/drag.ts` (≈13,3 s a ≈9,0 s los 402 m con cambios perfectos).
+- El jugador y la IA usan el mismo motor (`drag.ts`); la IA tiene error de habilidad por categoría (`SKILL`). Vista en canvas: `src/ui/dragView.ts`.
+- Al terminar se guarda el resultado y se cobra una sola vez. Si recargas a mitad de carrera, se cuenta como abandonada.
+- Pruebas: `node tools/test_race.mjs`. Limitación: validación del lado del cliente; para premios competitivos reales hará falta una función de Supabase.
