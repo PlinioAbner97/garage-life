@@ -36,6 +36,8 @@ export const SPRITE_INFO = Object.fromEntries(
  * de la máscara alpha. Los autos nuevos ya se renderizan a este tamaño (tools/render_new_cars.py);
  * el Kobalt (Subaru) salió 6% más grande y se reduce aquí desde el piso.
  */
+/** Los sprites de los autos están renderizados a SPRITE_RES veces la resolución de pantalla del juego (nitidez al hacer zoom y en pantallas de alta densidad). */
+export const SPRITE_RES = 2;
 export const SPRITE_SCALE: Record<SpriteKey, number> = { ecl: 1, sub: 0.939, sup: 1, r34: 1, evo: 1 };
 
 /**

@@ -136,10 +136,10 @@ for key in os.environ.get('KEYS', 'sup,r34,evo').split(','):
     rewire_mask(pm, rm)
     render(f'{OUT}/{key}_mask_full.png')
     im = np.array(Image.open(f'{OUT}/{key}_mask_full.png'))
-    ys, xs = np.where(im[..., 3] > 8); m = 70
+    ys, xs = np.where(im[..., 3] > 8); ys = ys // S; xs = xs // S; m = 70
     box = (max(0, xs.min() - m), max(0, ys.min() - m), min(W, xs.max() + m), min(H, ys.max() + m + 10))
     print(key, 'box', box, flush=True)
-    Image.open(f'{OUT}/{key}_mask_full.png').crop(box).save(f'{OUT}/{key}_mask.png')
+    Image.open(f'{OUT}/{key}_mask_full.png').crop(tuple(int(S*v) for v in box)).save(f'{OUT}/{key}_mask.png')
     if os.environ.get('MASKONLY'): continue
     # --- beauty (A: auto + garaje, B: solo garaje) para recuperar la sombra
     sc = setup(int(os.environ.get('SAMPLES', '96')))
@@ -149,8 +149,8 @@ for key in os.environ.get('KEYS', 'sup,r34,evo').split(','):
     render(f'{OUT}/{key}_A_full.png')
     for o in keep: o.hide_render = True
     render(f'{OUT}/{key}_B_full.png')
-    A = np.array(Image.open(f'{OUT}/{key}_A_full.png').crop(box)).astype(np.float32) / 255
-    B = np.array(Image.open(f'{OUT}/{key}_B_full.png').crop(box)).astype(np.float32) / 255
+    A = np.array(Image.open(f'{OUT}/{key}_A_full.png').crop(tuple(int(S*v) for v in box))).astype(np.float32) / 255
+    B = np.array(Image.open(f'{OUT}/{key}_B_full.png').crop(tuple(int(S*v) for v in box))).astype(np.float32) / 255
     M = np.array(Image.open(f'{OUT}/{key}_mask.png')).astype(np.float32) / 255
     carA = M[..., 3]
     s_corr = np.clip((A[..., 3] - B[..., 3]) / np.maximum(1 - B[..., 3], 1e-3), 0, 1)

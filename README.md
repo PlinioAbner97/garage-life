@@ -99,3 +99,6 @@ Al crear cuenta, si ya había una partida local en ese dispositivo se sube a la 
 - Todos empiezan con la Recepción y una Bahía de Servicio ya instaladas (partidas anteriores las reciben una vez, `withStarter` en `store.ts`). Bahías extra: $5.000 (nivel 3).
 - Los trabajos viejos en curso se pueden cobrar, pero ya no se pueden iniciar nuevos.
 - **Balance (aprox.):** una bahía rinde ~$450-560/min; las solicitudes llegan más rápido con más bahías y reputación (`offerEvery` en `clients.ts`). Carros: $9k/$16k/$24k/$32k ≈ 20-70 min de juego. Carreras: premio ≈ 1-2× el ingreso de clientes de esa etapa; categorías superiores exigen mejores carros (`RACE_POWER`).
+
+## Calidad visual
+- Los sprites de los 5 autos están renderizados al **doble de resolución** (`SPRITE_RES = 2` en `src/engine/assets.ts`) con la misma caja y escala en pantalla, y la sombra de contacto se limpia/suaviza al recomponer. Regenerar: `SCALE=2 SAMPLES=64 ... tools/render_sprites.py` / `tools/render_new_cars.py` (`SCALE` en `tools/rl.py`).

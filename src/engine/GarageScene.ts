@@ -13,7 +13,7 @@ import { itemUrl } from '../data/itemAssets';
 import itemsInfo from '../assets/items/items_info.json';
 import { findFloor, findWall } from '../data/items';
 import { GARAGE_RECT, bayPath, footprint, nearestSlot, snapWall, snapGrid, validate, type Placed, type Rot, type Verdict } from '../core/layout';
-import { ASSETS, BG, LOT, PROJ, STREETS, SPRITE_INFO, SPRITE_KEYS, SPRITE_SCALE } from './assets';
+import { ASSETS, BG, LOT, PROJ, STREETS, SPRITE_INFO, SPRITE_KEYS, SPRITE_RES, SPRITE_SCALE } from './assets';
 
 // Mundo = garaje original (BG, vista inicial) dentro del lote completo (LOT) y las calles (STREETS).
 const WW = BG.w, HH = BG.h, CX = BG.x + BG.w / 2, CY = BG.y + BG.h / 2;
@@ -378,7 +378,7 @@ export class GarageScene extends Phaser.Scene {
       const px = info.box[0] + d.x, py = info.box[1] + d.y;
       const c = project(sx, sy);
       const k = SPRITE_SCALE[m.spriteKey];
-      v.sprite.setScale(k);
+      v.sprite.setScale(k / SPRITE_RES);
       // escala desde el centro de la plaza en el piso (el auto "se encoge" sin flotar)
       if (v.slot !== car.slot || v.model !== car.model) { v.sprite.setPosition(c.x + (px - c.x) * k, c.y + (py - c.y) * k); v.slot = car.slot; v.model = car.model; }
       v.sprite.setDepth(10 + c.y / 10);
@@ -440,7 +440,7 @@ export class GarageScene extends Phaser.Scene {
         this.clientCars.set(j.id, v);
       }
       {
-        v.sprite.setScale(SPRITE_SCALE[m.spriteKey]);
+        v.sprite.setScale(SPRITE_SCALE[m.spriteKey] / SPRITE_RES);
         const q = this.carPos(m.spriteKey, pos.x, pos.y); v.sprite.setPosition(q.x, q.y);
         const c = project(pos.x, pos.y);
         v.sprite.setDepth(10 + c.y / 10);

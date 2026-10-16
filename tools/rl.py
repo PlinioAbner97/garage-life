@@ -3,12 +3,13 @@ from mathutils import Vector
 from bpy_extras.object_utils import world_to_camera_view
 
 W,H=1920,1080
+S=int(__import__('os').environ.get('SCALE','1'))   # factor de supermuestreo de los sprites (2 = doble resolución; las cajas siguen en px 1x)
 def setup(samples):
     bpy.ops.wm.open_mainfile(filepath=__import__('os').environ.get('BLEND','cartown.blend'))
     sc=bpy.context.scene
     sc.render.engine='CYCLES'; sc.cycles.device='CPU'; sc.cycles.samples=samples
     sc.cycles.use_denoising=True
-    sc.render.resolution_x=W; sc.render.resolution_y=H; sc.render.resolution_percentage=100
+    sc.render.resolution_x=W; sc.render.resolution_y=H; sc.render.resolution_percentage=100*S
     sc.render.film_transparent=True
     sc.render.image_settings.file_format='PNG'; sc.render.image_settings.color_mode='RGBA'
     return sc
