@@ -104,3 +104,9 @@ Al crear cuenta, si ya había una partida local en ese dispositivo se sube a la 
 
 ## Calidad visual
 - Los sprites de los 5 autos están renderizados al **doble de resolución** (`SPRITE_RES = 2` en `src/engine/assets.ts`) con la misma caja y escala en pantalla, y la sombra de contacto se limpia/suaviza al recomponer. Regenerar: `SCALE=2 SAMPLES=64 ... tools/render_sprites.py` / `tools/render_new_cars.py` (`SCALE` en `tools/rl.py`).
+
+## Concesionario
+
+Zona aparte (botón 🏬 arriba a la derecha) con su propia cámara: fondo renderizado de `dealer.blend` sin los autos de referencia (`src/assets/dealer_bg.webp`, cámara `GL_DEALER_CAMERA_V9`). Los autos que se exhiben son los de `VEHICLES` (`src/data/vehicles.ts`), uno por plaza, sin duplicar; al tocar uno se ve nombre, precio y el botón **Comprar** (usa `store.buyCar`). La tienda ya no vende autos.
+
+**Añadir un auto nuevo:** darlo de alta en `vehicles.ts` (y sus sprites); aparece solo en la siguiente plaza libre (hasta 10, `DEALER_SLOTS` en `src/data/dealer.ts`, ver `GL_DEALER_SLOT_NN_CAR_ANCHOR`). Las plazas sin auto quedan vacías. Prueba: `node tools/test_dealer.mjs`.

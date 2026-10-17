@@ -17,6 +17,8 @@ export interface UIState {
   /** pestaña del menú Trabajos */
   jobsTab: 'mine' | 'clients';
   selectedId: string | null;
+  /** concesionario abierto (zona aparte, pantalla completa) */
+  dealer: boolean;
   /** vista previa de personalización (no guardada) */
   preview: { carId: string; paint: string; rim: string } | null;
   toasts: Toast[];
@@ -38,7 +40,7 @@ const freshSave = (): SaveData => ({
 /** Store único: la escena Phaser y la UI React leen y escriben aquí. Sin estado duplicado. */
 export class GameStore {
   private save: SaveData = freshSave();
-  private ui: UIState = { screen: 'start', panel: null, selectedId: null, preview: null, toasts: [], jobsTab: 'mine', visit: null, edit: null, loaded: false, now: Date.now() };
+  private ui: UIState = { screen: 'start', panel: null, selectedId: null, dealer: false, preview: null, toasts: [], jobsTab: 'mine', visit: null, edit: null, loaded: false, now: Date.now() };
   private snap: Snapshot = { save: this.save, ui: this.ui };
   private listeners = new Set<() => void>();
   private toastSeq = 1;
@@ -67,7 +69,7 @@ export class GameStore {
   async useBackend(b: SaveStore, migrateFrom?: SaveStore) {
     this.pendingFlush();
     this.backend = b; this.save = freshSave(); this.hasSave = false;
-    this.setUI({ loaded: false, visit: null, edit: null, screen: 'start', panel: null, selectedId: null, preview: null });
+    this.setUI({ loaded: false, visit: null, edit: null, screen: 'start', panel: null, selectedId: null, dealer: false, preview: null });
     let d = await b.load();
     if (!d && migrateFrom) {
       const local = await migrateFrom.load();
@@ -102,7 +104,7 @@ export class GameStore {
   async visit(userId: string, username: string): Promise<boolean> {
     const garage = await social.fetchGarage(userId);
     if (!garage) { this.toast(`${username} aún no ha abierto su garaje`, 'bad'); return false; }
-    this.setUI({ visit: { userId, username, garage }, panel: null, edit: null, selectedId: null, preview: null });
+    this.setUI({ visit: { userId, username, garage }, panel: null, edit: null, selectedId: null, dealer: false, preview: null });
     return true;
   }
   leaveVisit() { this.setUI({ visit: null }); }
@@ -110,10 +112,11 @@ export class GameStore {
   // ---- navegación
   startGame(newGame: boolean) {
     if (newGame) { this.save = freshSave(); void this.backend.save(this.save); }
-    this.setUI({ screen: 'game', edit: null, panel: null, selectedId: null, preview: null });
+    this.setUI({ screen: 'game', edit: null, panel: null, selectedId: null, dealer: false, preview: null });
     this.tick();
   }
-  toMenu() { this.hasSave = true; this.setUI({ screen: 'start', panel: null, selectedId: null }); }
+  toMenu() { this.hasSave = true; this.setUI({ screen: 'start', panel: null, selectedId: null, dealer: false }); }
+  openDealer(open: boolean) { this.setUI({ dealer: open, panel: null, ...(open ? { selectedId: null } : {}) }); }
   openPanel(p: UIState['panel']) { this.setUI({ panel: p, preview: p === 'customize' ? this.ui.preview : null }); }
   setPreview(pv: UIState['preview']) { this.setUI({ preview: pv }); }
   selectCar(id: string | null) { this.setUI({ selectedId: id }); }

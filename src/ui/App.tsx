@@ -6,6 +6,7 @@ import { StartScreen } from './StartScreen';
 import { Hud } from './Hud';
 import { Panels } from './Panels';
 import { RaceOverlay } from './Race';
+import { DealerOverlay } from './Dealer';
 
 export function App() {
   const host = useRef<HTMLDivElement>(null);
@@ -20,7 +21,7 @@ export function App() {
   return (
     <div className="app">
       <div ref={host} className="stage" />
-      {ui.screen === 'start' ? <StartScreen /> : (<><Hud /><Panels /><RaceOverlay /></>)}
+      {ui.screen === 'start' ? <StartScreen /> : (<><Hud /><Panels /><DealerOverlay /><RaceOverlay /></>)}
       <div className="toasts" aria-live="polite">
         {ui.toasts.map((t) => <div key={t.id} className={`toast ${t.kind}`}>{t.text}</div>)}
       </div>

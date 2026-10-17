@@ -53,6 +53,7 @@ export function Hud() {
           <button className="icon" title="Acercar" onClick={() => bridge.scene?.zoomBy(1.25)}>＋</button>
           <button className="icon" title="Alejar" onClick={() => bridge.scene?.zoomBy(0.8)}>－</button>
           <button className="icon" title="Vista completa" onClick={() => bridge.scene?.resetView()}>⤢</button>
+          {!ui.visit && !ui.edit && <button className="icon" title="Ir al concesionario" onClick={() => store.openDealer(true)}>🏬</button>}
           <button className="icon fr" title="Amigos" onClick={() => { void social.refresh(); open('friends'); }}>👥{soc.incoming.length > 0 && <em>{soc.incoming.length}</em>}</button>
           <button className="icon" title="Ajustes" onClick={() => open('settings')}>⚙️</button>
         </div>

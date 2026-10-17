@@ -80,9 +80,9 @@ function ShopPanel() {
     <>
       <div className="tabs">
         <button className={tab === 'items' ? 'on' : ''} onClick={() => setTab('items')}>🧰 Accesorios</button>
-        <button className={tab === 'cars' ? 'on' : ''} onClick={() => setTab('cars')}>🚗 Autos y taller</button>
+        <button className={tab === 'cars' ? 'on' : ''} onClick={() => setTab('cars')}>🛠️ Taller</button>
       </div>
-      {tab === 'items' ? <ItemShop /> : <CarShop />}
+      {tab === 'items' ? <ItemShop /> : <Workshop />}
     </>
   );
 }
@@ -210,31 +210,10 @@ function ExpandPanel() {
   );
 }
 
-function CarShop() {
-  const { save } = useGame();
-  const next = save.slotsUnlocked;
+function Workshop() {
+  const next = useGame().save.slotsUnlocked;
   return (
     <>
-      <h3>Autos</h3>
-      <div className="list">
-        {VEHICLES.map((m) => {
-          const locked = save.level < m.minLevel;
-          return (
-            <div key={m.id} className={`card ${locked ? 'locked' : ''}`}>
-              <div className="grow">
-                <b>{m.name}</b><small>{m.tagline}</small>
-                <Stat label="Potencia" v={m.stats.potencia} /><Stat label="Agarre" v={m.stats.agarre} /><Stat label="Estilo" v={m.stats.estilo} />
-                <small>Ingresos en trabajos ×{m.payBonus}</small>
-              </div>
-              <div className="col">
-                <button className="btn primary" disabled={locked} onClick={() => store.buyCar(m.id)}>
-                  {locked ? `🔒 Nivel ${m.minLevel}` : m.price === 0 ? 'Gratis' : `$${fmt(m.price)}`}
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
       <h3>Taller</h3>
       <div className="card">
         <div className="grow">
@@ -246,6 +225,10 @@ function CarShop() {
             {next >= SLOT_COUNT ? 'Completo' : `$${fmt(SLOT_UNLOCK_COST[next])}`}
           </button>
         </div>
+      </div>
+      <div className="card">
+        <div className="grow"><b>Comprar autos</b><small>Ahora se compran en el concesionario.</small></div>
+        <div className="col"><button className="btn primary" onClick={() => store.openDealer(true)}>🏬 Ir</button></div>
       </div>
       <p className="muted">La pintura y los rines se compran en <b>🎨 Estilo</b>.</p>
     </>
