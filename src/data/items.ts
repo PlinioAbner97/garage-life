@@ -43,10 +43,10 @@ export const ITEMS: ItemDef[] = [
   { id: 'compressor', name: 'Compresor', price: 1500, category: 'equipamiento', kind: 'floor', desc: 'Compresor de aire con tanque. .', w: 1.1, d: 1.1, prototype: true },
   { id: 'neon_sign', name: 'Letrero de neón', price: 1800, category: 'pared', kind: 'wall', desc: 'Letrero luminoso para el muro del taller.', w: 2.4, d: 0.18 },
   { id: 'vending_machine', name: 'Máquina de bebidas', price: 2500, category: 'muebles', kind: 'floor', desc: 'Máquina expendedora. Decorativa por ahora.', w: 1.0, d: 0.84, prototype: true },
-  { id: 'car_lift', name: 'Elevador de autos', price: 4500, category: 'equipamiento', kind: 'floor', desc: 'Elevador de dos columnas. : aún no sube autos.', w: 3.4, d: 0.44, prototype: true },
+  { id: 'car_lift', name: 'Elevador de autos', price: 6000, category: 'equipamiento', kind: 'floor', minLevel: 3, desc: 'Elevador de dos columnas. Necesario para aceptar reparaciones de motor y transmisión (las mejor pagadas).', w: 3.4, d: 0.44 },
   // ---- negocio de clientes (ver src/data/clients.ts)
   { id: 'reception', name: 'Recepción de Clientes', price: 15000, category: 'especial', kind: 'floor', special: 'reception', desc: 'Mostrador con computadora. Ya viene instalado en tu taller; este es de repuesto.', w: 2.54, d: 1.34 },
-  { id: 'service_bay', name: 'Bahía de Servicio', price: 5000, category: 'taller', kind: 'floor', minLevel: 3, special: 'bay', desc: 'Se instala sobre una plaza de auto libre y la reserva para vehículos de clientes. Al retirarla, la plaza vuelve a ser estacionamiento.', w: 3.4, d: 6.6 },
+  { id: 'service_bay', name: 'Bahía de Servicio', price: 8000, category: 'taller', kind: 'floor', minLevel: 3, special: 'bay', desc: 'Se instala sobre una plaza de auto libre y la reserva para vehículos de clientes. Al retirarla, la plaza vuelve a ser estacionamiento.', w: 3.4, d: 6.6 },
   // ---- JDM / tuning (decorativos): modelados con primitivas en tools/jdm_items.py
   { id: 'tire_stack', name: 'Pila de llantas con rin', price: 350, category: 'jdm', kind: 'floor', desc: 'Tres llantas apiladas con un rin dorado de exhibición.', w: 0.72, d: 0.72, prototype: true },
   { id: 'paper_lantern', name: 'Linterna japonesa', price: 300, category: 'jdm', kind: 'floor', desc: 'Linterna de papel roja sobre pie metálico, luz cálida de izakaya.', w: 0.6, d: 0.6, prototype: true },

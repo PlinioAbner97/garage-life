@@ -3,7 +3,7 @@ export const SLOT_COUNT = 5;
 /** El garaje original se mudó al fondo del lote, pegado a la pared trasera y centrado (x 0, y +14 m desde su posición en Blender). */
 export const GARAGE_OFFSET: [number, number] = [0, 14];
 const GARAGE_SLOTS: [number, number][] = [[-8, 0], [-4, 0], [0, 0], [4, 0], [8, 0]].map(([x, y]) => [x + GARAGE_OFFSET[0], y + GARAGE_OFFSET[1]] as [number, number]);
-export const SLOT_UNLOCK_COST = [0, 0, 2500, 7500, 20000];
+export const SLOT_UNLOCK_COST = [0, 0, 3000, 10000, 30000];
 export const SELL_RATIO = 0.5;
 export const xpForLevel = (level: number) => Math.round(80 * Math.pow(level, 1.5));
 
@@ -26,17 +26,17 @@ export interface ZoneDef {
 const row = (cx: number, y: number): [number, number][] => [-8, -4, 0, 4, 8].map((dx) => [cx + dx, y]);
 export const ZONES: ZoneDef[] = [
   { id: 'patio-derecho', name: 'Patio derecho', desc: 'El terreno frente al garaje, lado derecho. 5 plazas más.',
-    rect: [0, -7, 24, 7], cost: 8000, minLevel: 5, slots: row(12, 0) },
+    rect: [0, -7, 24, 7], cost: 15000, minLevel: 5, slots: row(12, 0) },
   { id: 'patio-izquierdo', name: 'Patio izquierdo', desc: 'El terreno frente al garaje, lado izquierdo. 5 plazas más.',
-    rect: [-24, -7, 0, 7], cost: 12000, minLevel: 6, slots: row(-12, 0) },
+    rect: [-24, -7, 0, 7], cost: 22000, minLevel: 6, slots: row(-12, 0) },
   { id: 'flanco-derecho', name: 'Flanco derecho', desc: 'Espacio junto al garaje, a la derecha. 2 plazas más.',
-    rect: [12, 7, 24, 21], cost: 18000, minLevel: 8, requires: 'patio-derecho', slots: [[16, 14], [20, 14]] },
+    rect: [12, 7, 24, 21], cost: 35000, minLevel: 8, requires: 'patio-derecho', slots: [[16, 14], [20, 14]] },
   { id: 'flanco-izquierdo', name: 'Flanco izquierdo', desc: 'Espacio junto al garaje, a la izquierda (ya sin muro). 2 plazas más.',
-    rect: [-24, 7, -12, 21], cost: 18000, minLevel: 8, requires: 'patio-izquierdo', slots: [[-16, 14], [-20, 14]] },
+    rect: [-24, 7, -12, 21], cost: 35000, minLevel: 8, requires: 'patio-izquierdo', slots: [[-16, 14], [-20, 14]] },
   { id: 'frente-derecho', name: 'Frente derecho', desc: 'La explanada hasta la calle, lado derecho. 5 plazas más.',
-    rect: [0, -21, 24, -7], cost: 30000, minLevel: 10, requires: 'patio-derecho', slots: row(12, -14) },
+    rect: [0, -21, 24, -7], cost: 60000, minLevel: 10, requires: 'patio-derecho', slots: row(12, -14) },
   { id: 'frente-izquierdo', name: 'Frente izquierdo', desc: 'La explanada hasta la calle, lado izquierdo. 5 plazas más.',
-    rect: [-24, -21, 0, -7], cost: 30000, minLevel: 10, requires: 'patio-izquierdo', slots: row(-12, -14) },
+    rect: [-24, -21, 0, -7], cost: 60000, minLevel: 10, requires: 'patio-izquierdo', slots: row(-12, -14) },
 ];
 /** Áreas del lote aún sin uso (ninguna por ahora; el garaje ya no tiene muros laterales que las bloqueen). */
 export const FUTURE_ZONES: { id: string; name: string; rect: [number, number, number, number]; note: string }[] = [];

@@ -98,7 +98,9 @@ Al crear cuenta, si ya había una partida local en ese dispositivo se sube a la 
 - Los autos propios **ya no dan dinero**: el ingreso viene de **clientes** (reparaciones en bahías) y de **carreras**. Los autos propios sirven para competir y lucir.
 - Todos empiezan con la Recepción y una Bahía de Servicio ya instaladas (partidas anteriores las reciben una vez, `withStarter` en `store.ts`). Bahías extra: $5.000 (nivel 3).
 - Los trabajos viejos en curso se pueden cobrar, pero ya no se pueden iniciar nuevos.
-- **Balance (aprox.):** una bahía rinde ~$450-560/min; las solicitudes llegan más rápido con más bahías y reputación (`offerEvery` en `clients.ts`). Carros: $9k/$16k/$24k/$32k ≈ 20-70 min de juego. Carreras: premio ≈ 1-2× el ingreso de clientes de esa etapa; categorías superiores exigen mejores carros (`RACE_POWER`).
+- **Balance (precios finales, tabla en `src/data/*.ts`):** plazas $3k/$10k/$30k · bahía extra $8k (nivel 3) · elevador $6k (nivel 3; necesario para motor y transmisión) · carros $12k (Kobalt, nv3) / $30k (Akane, nv4) / $65k (Nami, nv6) / $130k (Shirogane, nv8) · zonas $15k, $22k, $35k×2, $60k×2 · XP por comprar un carro = precio/80.
+- **Ritmo estimado (jugador eficiente, `/tmp` sim con `offerEvery`):** 2ª bahía ~30 min, Kobalt ~50, Akane ~70, Nami ~110, Shirogane ~155 min. Una bahía rinde ~$450-730/min y escala con bahías y reputación.
+- **Carreras:** Callejera $100→$400 · Amateur $800→$2.800 · Pro $2.500→$6.500 · Élite $5.000→$11.000. Rinden ~1-1,5× el ingreso por clientes de esa etapa y exigen el carro de su nivel.
 
 ## Calidad visual
 - Los sprites de los 5 autos están renderizados al **doble de resolución** (`SPRITE_RES = 2` en `src/engine/assets.ts`) con la misma caja y escala en pantalla, y la sombra de contacto se limpia/suaviza al recomponer. Regenerar: `SCALE=2 SAMPLES=64 ... tools/render_sprites.py` / `tools/render_new_cars.py` (`SCALE` en `tools/rl.py`).

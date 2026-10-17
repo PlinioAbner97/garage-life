@@ -145,7 +145,7 @@ export class GameStore {
     const id = `c${this.save.nextCarId}`;
     const car: OwnedCar = { id, model: modelId, paint: 'stock', rim: 'stock', slot };
     this.setSave({ money: this.save.money - m.price, cars: [...this.save.cars, car], nextCarId: this.save.nextCarId + 1 });
-    this.grant(0, Math.round(m.price / 40));
+    this.grant(0, Math.round(m.price / 80));
     this.toast(`Compraste un ${m.name}`);
     this.setUI({ selectedId: id });
     return true;

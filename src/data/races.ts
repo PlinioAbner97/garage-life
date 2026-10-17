@@ -19,9 +19,9 @@ export interface RaceOpp {
 export interface RaceTier { id: string; name: string; icon: string; minLevel: number; fee: number; prize: number; xp: number; opp: { name: string; model: string; paint: string; mul: number } }
 export const RACE_TIERS: RaceTier[] = [
   { id: 'street', name: 'Callejera', icon: '🌙', minLevel: 1, fee: 100, prize: 400, xp: 40, opp: { name: 'Rival callejero', model: 'falcon-gt', paint: 'black', mul: 0.9 } },
-  { id: 'amateur', name: 'Amateur', icon: '🏁', minLevel: 3, fee: 400, prize: 1100, xp: 100, opp: { name: 'Piloto amateur', model: 'kobalt-22', paint: 'blue', mul: 0.95 } },
-  { id: 'pro', name: 'Profesional', icon: '🏆', minLevel: 5, fee: 1200, prize: 3400, xp: 220, opp: { name: 'Piloto pro', model: 'akane-rs', paint: 'red', mul: 1 } },
-  { id: 'elite', name: 'Élite', icon: '👑', minLevel: 7, fee: 3500, prize: 7500, xp: 450, opp: { name: 'Campeón', model: 'nami-34', paint: 'white', mul: 1 } },
+  { id: 'amateur', name: 'Amateur', icon: '🏁', minLevel: 3, fee: 800, prize: 2800, xp: 150, opp: { name: 'Piloto amateur', model: 'kobalt-22', paint: 'blue', mul: 0.95 } },
+  { id: 'pro', name: 'Profesional', icon: '🏆', minLevel: 5, fee: 2500, prize: 6500, xp: 350, opp: { name: 'Piloto pro', model: 'akane-rs', paint: 'red', mul: 1 } },
+  { id: 'elite', name: 'Élite', icon: '👑', minLevel: 7, fee: 5000, prize: 11000, xp: 600, opp: { name: 'Campeón', model: 'nami-34', paint: 'white', mul: 1 } },
 ];
 export const FRIEND_MIN_LEVEL = 2;
 export const aiOpp = (t: RaceTier): RaceOpp => ({ kind: 'ai', tier: t.id, name: t.opp.name, model: t.opp.model, paint: t.opp.paint, rim: 'stock', mul: t.opp.mul, fee: t.fee, prize: t.prize, xp: t.xp });

@@ -44,7 +44,7 @@ await pg.waitForTimeout(1500);
 const inScene = await ev(() => __gl.getSnapshot().save.biz.jobs.find((j) => j.state === 'arriving') !== undefined);
 T('7 aceptar -> auto llega a la bahía', acc && inScene);
 await ev((id) => { const b = __gl.getSnapshot().save.biz; __gl.setSave({ biz: { ...b, jobs: b.jobs.map((j) => (j.id === id ? { ...j, acceptedAt: Date.now() - 10000 } : j)) } }); }, jid);
-await pg.waitForTimeout(1200);
+await pg.waitForFunction((id) => __gl.getSnapshot().save.biz.jobs.find((j) => j.id === id)?.state === 'waiting', jid, { timeout: 10000 }).catch(() => {});
 T('7b estado waiting', await ev((id) => __gl.getSnapshot().save.biz.jobs.find((j) => j.id === id).state === 'waiting', jid));
 // 11 una bahía no tiene dos vehículos
 const jid2 = await ev(() => __gl.getSnapshot().save.biz.jobs.find((j) => j.state === 'offered')?.id);

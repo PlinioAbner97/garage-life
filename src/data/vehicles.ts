@@ -22,22 +22,22 @@ export const VEHICLES: VehicleModel[] = [
   },
   {
     id: 'kobalt-22', name: 'Kobalt 22', tagline: 'Sedán rally de edición limitada. Rápido y agresivo.',
-    spriteKey: 'sub', price: 9000, minLevel: 3, payBonus: 1.25,
+    spriteKey: 'sub', price: 12000, minLevel: 3, payBonus: 1.25,
     stats: { potencia: 82, agarre: 85, estilo: 78 },
   },
   {
     id: 'akane-rs', name: 'Akane RS', tagline: 'Biturbo con alerón gigante. Leyenda de las calles.',
-    spriteKey: 'sup', price: 16000, minLevel: 4, payBonus: 1.5,
+    spriteKey: 'sup', price: 30000, minLevel: 4, payBonus: 1.5,
     stats: { potencia: 90, agarre: 72, estilo: 88 },
   },
   {
     id: 'nami-34', name: 'Nami 34', tagline: 'Coupé de tracción total, azul y letal en curva.',
-    spriteKey: 'r34', price: 24000, minLevel: 5, payBonus: 1.75,
+    spriteKey: 'r34', price: 65000, minLevel: 6, payBonus: 1.75,
     stats: { potencia: 92, agarre: 88, estilo: 82 },
   },
   {
     id: 'shirogane-x', name: 'Shirogane X', tagline: 'Sedán de competición. El rey del taller.',
-    spriteKey: 'evo', price: 32000, minLevel: 7, payBonus: 2,
+    spriteKey: 'evo', price: 130000, minLevel: 8, payBonus: 2,
     stats: { potencia: 95, agarre: 92, estilo: 78 },
   },
 ];
