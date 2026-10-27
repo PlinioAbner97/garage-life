@@ -142,17 +142,23 @@ select { font: inherit; padding: 10px; border-radius: 10px; background: var(--pa
 .raceres { text-align: center; max-width: 380px; padding: 0 20px; } .raceres h2 { margin: 0 0 8px; font-size: 32px; } .raceres p { margin: 0 0 8px; color: var(--muted); } .raceres .btn { margin-top: 10px; }
 
 /* ---------- concesionario */
-.dealer { position: fixed; inset: 0; z-index: 15; background: radial-gradient(ellipse at 50% 40%, #1a2038, #080b16 80%); touch-action: none; user-select: none; overflow: hidden; }
-.dealer-view { position: absolute; inset: 0; cursor: grab; }
-.dealer-stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
-.dealer-bg { position: absolute; left: 0; top: 0; display: block; pointer-events: none; }
-.dealer-car { position: absolute; pointer-events: none; transition: filter .15s; }
-.dealer-car.on { filter: drop-shadow(0 0 10px #ffb02e) brightness(1.12); }
-.dealer-pad { position: absolute; left: 0; top: 0; pointer-events: none; } .dealer-pad polygon { fill: rgba(255,176,46,.22); stroke: #ffb02e; stroke-width: 5; }
-.dealer-tag { position: absolute; transform: translate(-50%, -100%); background: rgba(11,16,32,.85); border: 1px solid var(--line); color: #fff; font-weight: 600; font-size: 22px; padding: 2px 12px; border-radius: 10px; white-space: nowrap; pointer-events: none; }
-.dealer-tag.lock { color: var(--muted); }
+.dealer { position: fixed; inset: 0; z-index: 15; background: radial-gradient(ellipse at 50% 40%, #141a30, #05070d 85%); touch-action: none; user-select: none; overflow: hidden; }
+.dealer-view { position: absolute; inset: 0; cursor: grab; touch-action: none; } .dealer-view:active { cursor: grabbing; }
+.dealer-stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; } .dealer-stage.anim { transition: transform .5s cubic-bezier(.2,.8,.2,1); }
+.dealer-bg, .dealer-fg { position: absolute; left: 0; top: 0; display: block; pointer-events: none; }
+.dealer-layer { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
+.dealer-car { position: absolute; pointer-events: none; filter: brightness(.82) contrast(1.06) saturate(1.02); transition: filter .2s; }
+.dealer-car.on { filter: brightness(1.02) contrast(1.06) drop-shadow(0 0 12px rgba(255,176,46,.85)); }
+.dealer-padsel { fill: rgba(255,176,46,.16); stroke: #ffb02e; stroke-width: 5; }
+.dealer-glows i { position: absolute; display: block; pointer-events: none; will-change: opacity; border-radius: 50%; }
+.dealer-pulse { animation: dpulse 3.2s ease-in-out infinite; } .dealer-flick { animation: dflick 4.5s ease-in-out infinite; }
+@keyframes dpulse { 0%,100% { opacity: .55 } 50% { opacity: 1 } } @keyframes dflick { 0%,100% { opacity: .75 } 50% { opacity: 1 } 70% { opacity: .85 } }
+.dealer-vig { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0,0,0,.55) 100%); }
+.dealer-tag { position: absolute; transform-origin: 50% 100%; background: rgba(11,16,32,.85); border: 1px solid var(--line); color: #fff; font-weight: 600; font-size: 22px; padding: 2px 12px; border-radius: 10px; white-space: nowrap; pointer-events: none; }
+.dealer-tag.lock { color: var(--muted); } .dealer-tag.on { border-color: #ffb02e; }
 .dealer-top { position: absolute; z-index: 2; top: calc(10px + var(--safe-t)); left: 10px; right: 10px; display: flex; gap: 8px; align-items: center; pointer-events: none; }
 .dealer-top > * { pointer-events: auto; } .dealer-top .grow { text-align: center; }
+.dealer-zoom { position: absolute; z-index: 2; right: 10px; top: calc(64px + var(--safe-t)); display: grid; gap: 6px; }
 .dealer-card, .dealer-hint { position: absolute; z-index: 2; left: 50%; transform: translateX(-50%); bottom: calc(16px + var(--safe-b)); width: min(520px, calc(100% - 20px)); background: rgba(20,27,51,.97); border: 1px solid var(--line); border-radius: 18px; padding: 12px 14px; box-shadow: 0 16px 50px rgba(0,0,0,.55); }
 .dealer-card { display: flex; gap: 12px; align-items: center; } .dealer-card .grow { display: grid; gap: 2px; } .dealer-card small { color: var(--muted); }
-.dealer-hint { text-align: center; color: var(--muted); background: rgba(11,16,32,.85); }
+.dealer-hint { text-align: center; color: var(--muted); background: rgba(11,16,32,.85); font-size: 13px; }

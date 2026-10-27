@@ -110,3 +110,5 @@ Al crear cuenta, si ya había una partida local en ese dispositivo se sube a la 
 Zona aparte (botón 🏬 arriba a la derecha) con su propia cámara: fondo renderizado de `dealer.blend` sin los autos de referencia (`src/assets/dealer_bg.webp`, cámara `GL_DEALER_CAMERA_V9`). Los autos que se exhiben son los de `VEHICLES` (`src/data/vehicles.ts`), uno por plaza, sin duplicar; al tocar uno se ve nombre, precio y el botón **Comprar** (usa `store.buyCar`). La tienda ya no vende autos.
 
 **Añadir un auto nuevo:** darlo de alta en `vehicles.ts` (y sus sprites); aparece solo en la siguiente plaza libre (hasta 10, `DEALER_SLOTS` en `src/data/dealer.ts`, ver `GL_DEALER_SLOT_NN_CAR_ANCHOR`). Las plazas sin auto quedan vacías. Prueba: `node tools/test_dealer.mjs`.
+
+La cámara del concesionario es libre (arrastrar, rueda/pellizco para zoom, botones ＋ － ⤢; al tocar un auto se acerca a él). Los autos llevan sombra de contacto, color ajustado a la noche y las farolas/palmera delanteras (`dealer_fg.webp`, render aparte) se dibujan sobre ellos; el brillo de farolas y neón es animado.

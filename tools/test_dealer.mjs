@@ -13,7 +13,7 @@ await pg.screenshot({ path: '/tmp/claude-0/d0.png' });
 // tocar cada auto
 const boxes = await pg.locator('.dealer-car').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [r.x + r.width * 0.5, r.y + r.height * 0.55]; }));
 let names = [];
-for (const [x, y] of boxes) { await pg.mouse.click(x, y); await pg.waitForTimeout(150); names.push(await pg.locator('.dealer-card b').first().textContent().catch(() => null)); }
+for (let i = 0; i < 5; i++) { await pg.click('.dealer-zoom button[title="Vista completa"]'); await pg.waitForTimeout(900); const [x, y] = (await pg.locator('.dealer-car').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [r.x + r.width * 0.5, r.y + r.height * 0.55]; })))[i]; await pg.mouse.click(x, y); await pg.waitForTimeout(900); names.push(await pg.locator('.dealer-card b').first().textContent({ timeout: 4000 }).catch(() => null)); }
 T('cada auto abre su ficha', new Set(names).size === 5, names.join('|'));
 await pg.screenshot({ path: '/tmp/claude-0/d1.png' });
 const n0 = await ev(() => __gl.getSnapshot().save.cars.length); const m0 = await ev(() => __gl.getSnapshot().save.money);
