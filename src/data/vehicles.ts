@@ -1,6 +1,6 @@
 // Datos de vehículos. Agregar un auto = agregar una entrada aquí + sus sprites renderizados.
 // Nombres ficticios: los modelos 3D de la escena son JDM originales del usuario, sin logos en el juego.
-export type SpriteKey = 'ecl' | 'sub' | 'sup' | 'r34' | 'evo';
+export type SpriteKey = 'ecl' | 'sub' | 'sup' | 'r34' | 'evo' | 'rx7';
 
 export interface VehicleModel {
   id: string;
@@ -39,6 +39,11 @@ export const VEHICLES: VehicleModel[] = [
     id: 'shirogane-x', name: 'Shirogane X', tagline: 'Sedán de competición. El rey del taller.',
     spriteKey: 'evo', price: 130000, minLevel: 8, payBonus: 2,
     stats: { potencia: 95, agarre: 92, estilo: 78 },
+  },
+  {
+    id: 'ryoku-fd', name: 'Ryoku FD', tagline: 'Coupé rotativo con alerón de GT. Ligero, afinado y muy rápido.',
+    spriteKey: 'rx7', price: 45000, minLevel: 5, payBonus: 1.65,
+    stats: { potencia: 88, agarre: 80, estilo: 90 },
   },
 ];
 

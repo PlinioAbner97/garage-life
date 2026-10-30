@@ -12,7 +12,7 @@ import numpy as np
 from PIL import Image
 
 OUT = os.environ.get('OUT', 'out'); os.makedirs(OUT, exist_ok=True)
-SUPRA_FILE = os.environ['SUPRA_FILE']; EVO_FILE = os.environ['EVO_FILE']
+SUPRA_FILE = os.environ.get('SUPRA_FILE', ''); EVO_FILE = os.environ.get('EVO_FILE', ''); RX7_FILE = os.environ.get('RX7_FILE', '')
 STUDIO = {'Plane.108', 'Plane.051', 'Plane.044', 'Plane.052', 'Plane.144', 'Plane.054', 'Plane.146'}
 
 # length: calibrado para que el area en pantalla (mascara) iguale al Eclipse. slot_x: SLOT_WORLD de src/data/config.ts (slots 3,4,5). rotz: la nariz debe apuntar a -Y.
@@ -22,6 +22,9 @@ CARS = {
                 rim=os.environ.get('SUP_RIM', 'metal.001,Material.059').split(','), skip=[]),
     'r34': dict(file=SUPRA_FILE, coll='SKYLINE_R34_CAR', slot=(4, 0), rotz=0.0, length=5.66,
                 paint=['Car Paint.004', 'Car Paint.005'], rim=['Rim.003'], skip=['Ground'], dedupe=True),
+    # Mazda RX-7 (7d033628): la coleccion trae una luz de area y una camara que se eliminan al importar. Morro hacia -Y sin rotar.
+    'rx7': dict(file=RX7_FILE, coll='Collection', slot=(12, 0), rotz=0.0, length=float(os.environ.get('RX7_LEN', '5.5')),
+                paint=['Body'], rim=['Rims', 'Rims 2', 'Material.001'], skip=[], drop_types=('LIGHT', 'CAMERA')),
     'evo': dict(file=EVO_FILE, coll='EVO8_CAR', slot=(8, 0), rotz=0.0, length=5.48,
                 paint=['car_paint'], rim=['Metal'], skip=['Plane.081', 'Plane.078', 'Plane.079']),
 }
@@ -64,6 +67,8 @@ def add_car(key):
     col = dst.collections[0]
     bpy.context.scene.collection.children.link(col)
     skip = set(dst.objects)
+    for o in list(col.all_objects):
+        if o.type in c.get('drop_types', ()): bpy.data.objects.remove(o, do_unlink=True)
     objs = set(col.all_objects)
     for o in list(objs): objs |= set(o.children_recursive)
     keep = {o for o in objs if o.type == 'MESH' and o not in skip}
