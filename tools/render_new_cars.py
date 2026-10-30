@@ -12,7 +12,7 @@ import numpy as np
 from PIL import Image
 
 OUT = os.environ.get('OUT', 'out'); os.makedirs(OUT, exist_ok=True)
-SUPRA_FILE = os.environ.get('SUPRA_FILE', ''); EVO_FILE = os.environ.get('EVO_FILE', ''); RX7_FILE = os.environ.get('RX7_FILE', '')
+SUPRA_FILE = os.environ.get('SUPRA_FILE', ''); EVO_FILE = os.environ.get('EVO_FILE', ''); RX7_FILE = os.environ.get('RX7_FILE', ''); GTR_FILE = os.environ.get('GTR_FILE', '')
 STUDIO = {'Plane.108', 'Plane.051', 'Plane.044', 'Plane.052', 'Plane.144', 'Plane.054', 'Plane.146'}
 
 # length: calibrado para que el area en pantalla (mascara) iguale al Eclipse. slot_x: SLOT_WORLD de src/data/config.ts (slots 3,4,5). rotz: la nariz debe apuntar a -Y.
@@ -25,6 +25,9 @@ CARS = {
     # Mazda RX-7 (7d033628): la coleccion trae una luz de area y una camara que se eliminan al importar. Morro hacia -Y sin rotar.
     'rx7': dict(file=RX7_FILE, coll='Collection', slot=(12, 0), rotz=0.0, length=float(os.environ.get('RX7_LEN', '5.5')),
                 paint=['Body'], rim=['Rims', 'Rims 2', 'Material.001'], skip=[], drop_types=('LIGHT', 'CAMERA')),
+    # Nissan GT-R R35 (c148d4d0): sin padre, sin luces. El morro apunta a +Y en el modelo -> rotz=pi. Pintura = Material.001, rines = Material.010.
+    'gtr': dict(file=GTR_FILE, coll='Collection', slot=(-4, 3), rotz=math.pi, length=float(os.environ.get('GTR_LEN', '5.6')),
+                paint=['Material.001'], rim=['Material.010'], skip=[], drop_types=('LIGHT', 'CAMERA')),
     'evo': dict(file=EVO_FILE, coll='EVO8_CAR', slot=(8, 0), rotz=0.0, length=5.48,
                 paint=['car_paint'], rim=['Metal'], skip=['Plane.081', 'Plane.078', 'Plane.079']),
 }

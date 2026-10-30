@@ -5,16 +5,16 @@ const errs = []; pg.on('pageerror', (e) => errs.push(String(e)));
 await pg.goto('http://localhost:4173/?debug'); await pg.waitForTimeout(1500);
 let ok = 0, bad = 0; const T = (n, c, x = '') => { c ? ok++ : bad++; console.log(`${c ? 'OK  ' : 'FAIL'} ${n} ${x}`); };
 const ev = (f, a) => pg.evaluate(f, a);
-await ev(() => { __gl.startGame(true); __gl.setSave({ money: 200000, level: 9, slotsUnlocked: 5 }); }); await pg.waitForTimeout(1500);
+await ev(() => { __gl.startGame(true); __gl.setSave({ money: 400000, level: 12, slotsUnlocked: 5 }); }); await pg.waitForTimeout(1500);
 await pg.click('button[title="Ir al concesionario"]'); await pg.waitForTimeout(800);
 T('abre el concesionario', await pg.locator('.dealer').count() === 1);
-T('solo los autos del juego (sin duplicar)', await pg.locator('.dealer-car').count() === 6);
+T('solo los autos del juego (sin duplicar)', await pg.locator('.dealer-car').count() === 7);
 await pg.screenshot({ path: '/tmp/claude-0/d0.png' });
 // tocar cada auto
 const boxes = await pg.locator('.dealer-car').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [r.x + r.width * 0.5, r.y + r.height * 0.55]; }));
 let names = [];
-for (let i = 0; i < 6; i++) { await pg.click('.dealer-zoom button[title="Vista completa"]'); await pg.waitForTimeout(900); const [x, y] = (await pg.locator('.dealer-car').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [r.x + r.width * 0.5, r.y + r.height * 0.55]; })))[i]; await pg.mouse.click(x, y); await pg.waitForTimeout(900); names.push(await pg.locator('.dealer-card b').first().textContent({ timeout: 4000 }).catch(() => null)); }
-T('cada auto abre su ficha', new Set(names).size === 6, names.join('|'));
+for (let i = 0; i < 7; i++) { await pg.click('.dealer-zoom button[title="Vista completa"]'); await pg.waitForTimeout(900); const [x, y] = (await pg.locator('.dealer-car').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [r.x + r.width * 0.5, r.y + r.height * 0.55]; })))[i]; await pg.mouse.click(x, y); await pg.waitForTimeout(900); names.push(await pg.locator('.dealer-card b').first().textContent({ timeout: 4000 }).catch(() => null)); }
+T('cada auto abre su ficha', new Set(names).size === 7, names.join('|'));
 await pg.screenshot({ path: '/tmp/claude-0/d1.png' });
 const n0 = await ev(() => __gl.getSnapshot().save.cars.length); const m0 = await ev(() => __gl.getSnapshot().save.money);
 await pg.locator('.dealer-card .btn.primary').click(); await pg.waitForTimeout(500);
