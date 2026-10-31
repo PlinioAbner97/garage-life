@@ -12,7 +12,7 @@ import numpy as np
 from PIL import Image
 
 OUT = os.environ.get('OUT', 'out'); os.makedirs(OUT, exist_ok=True)
-SUPRA_FILE = os.environ.get('SUPRA_FILE', ''); EVO_FILE = os.environ.get('EVO_FILE', ''); RX7_FILE = os.environ.get('RX7_FILE', ''); GTR_FILE = os.environ.get('GTR_FILE', '')
+SUPRA_FILE = os.environ.get('SUPRA_FILE', ''); EVO_FILE = os.environ.get('EVO_FILE', ''); RX7_FILE = os.environ.get('RX7_FILE', ''); Z_FILE = os.environ.get('Z_FILE', ''); GTR_FILE = os.environ.get('GTR_FILE', '')
 STUDIO = {'Plane.108', 'Plane.051', 'Plane.044', 'Plane.052', 'Plane.144', 'Plane.054', 'Plane.146'}
 
 # length: calibrado para que el area en pantalla (mascara) iguale al Eclipse. slot_x: SLOT_WORLD de src/data/config.ts (slots 3,4,5). rotz: la nariz debe apuntar a -Y.
@@ -28,6 +28,11 @@ CARS = {
     # Nissan GT-R R35 (c148d4d0): sin padre, sin luces. El morro apunta a +Y en el modelo -> rotz=pi. Pintura = Material.001, rines = Material.010.
     'gtr': dict(file=GTR_FILE, coll='Collection', slot=(-4, 3), rotz=math.pi, length=float(os.environ.get('GTR_LEN', '5.6')),
                 paint=['Material.001'], rim=['Material.010'], skip=[], drop_types=('LIGHT', 'CAMERA')),
+    # Nissan 350Z (a20d9d43, sin la coleccion logos): el modelo viene en varias colecciones (body, wheels, lights...), todas se importan. Morro a -Y.
+    'z350': dict(file=Z_FILE, coll=['body ', 'interior dummy', 'lights', 'parts', 'wheels', 'windows'], slot=(6, 3), rotz=0.0, length=float(os.environ.get('Z_LEN', '5.6')),
+                 paint=['black paint'], rim=['rims'], skip=[], drop_types=('LIGHT', 'CAMERA'),
+                 # el original es negro puro: no sirve de base para recolorear (sombras/reflejos relativos al promedio). Se pinta de verde medio.
+                 paint_color=(0.03, 0.30, 0.10, 1.0)),
     'evo': dict(file=EVO_FILE, coll='EVO8_CAR', slot=(8, 0), rotz=0.0, length=5.48,
                 paint=['car_paint'], rim=['Metal'], skip=['Plane.081', 'Plane.078', 'Plane.079']),
 }
@@ -64,15 +69,21 @@ def add_car(key):
     """Abre el garaje (ya hecho por setup), importa el auto, lo escala, gira y coloca en su slot."""
     c = CARS[key]
     with bpy.data.libraries.load(c['file'], link=False) as (src, dst):
-        dst.collections = [c['coll']]
+        dst.collections = list(c['coll']) if isinstance(c['coll'], list) else [c['coll']]
         dst.materials = [n for n in c['paint'] + c['rim'] if n in src.materials]
         dst.objects = [n for n in c['skip'] if n in src.objects]
     col = dst.collections[0]
-    bpy.context.scene.collection.children.link(col)
+    for cc in dst.collections: bpy.context.scene.collection.children.link(cc)
     skip = set(dst.objects)
-    for o in list(col.all_objects):
-        if o.type in c.get('drop_types', ()): bpy.data.objects.remove(o, do_unlink=True)
-    objs = set(col.all_objects)
+    if c.get('paint_color'):
+        for m in dst.materials[:len(c['paint'])]:
+            for n in m.node_tree.nodes:
+                if n.bl_idname == 'ShaderNodeBsdfPrincipled':
+                    n.inputs['Base Color'].default_value = c['paint_color']; n.inputs['Metallic'].default_value = 0.55; n.inputs['Roughness'].default_value = 0.3
+    objs = set()
+    for cc in dst.collections: objs |= set(cc.all_objects)
+    for o in list(objs):
+        if o.type in c.get('drop_types', ()): bpy.data.objects.remove(o, do_unlink=True); objs.discard(o)
     for o in list(objs): objs |= set(o.children_recursive)
     keep = {o for o in objs if o.type == 'MESH' and o not in skip}
     if c.get('dedupe'):

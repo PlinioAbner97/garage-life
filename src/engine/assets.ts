@@ -17,10 +17,12 @@ import rx7Beauty from '../assets/rx7_beauty.png';
 import rx7Mask from '../assets/rx7_mask.png';
 import gtrBeauty from '../assets/gtr_beauty.png';
 import gtrMask from '../assets/gtr_mask.png';
+import z350Beauty from '../assets/z350_beauty.png';
+import z350Mask from '../assets/z350_mask.png';
 import info from '../assets/info.json';
 import type { SpriteKey } from '../data/vehicles';
 
-export const SPRITE_KEYS: SpriteKey[] = ['ecl', 'sub', 'sup', 'r34', 'evo', 'rx7', 'gtr'];
+export const SPRITE_KEYS: SpriteKey[] = ['ecl', 'sub', 'sup', 'r34', 'evo', 'rx7', 'gtr', 'z350'];
 
 export const ASSETS: { bg: string; lotA: string; lotB: string; streets: string } & Record<SpriteKey, { beauty: string; mask: string }> = {
   bg, lotA, lotB, streets,
@@ -31,6 +33,7 @@ export const ASSETS: { bg: string; lotA: string; lotB: string; streets: string }
   evo: { beauty: evoBeauty, mask: evoMask },
   rx7: { beauty: rx7Beauty, mask: rx7Mask },
   gtr: { beauty: gtrBeauty, mask: gtrMask },
+  z350: { beauty: z350Beauty, mask: z350Mask },
 };
 export const PROJ = info.proj as { origin: number[]; x: number[]; y: number[]; z: number[] };
 export const SPRITE_INFO = Object.fromEntries(
@@ -44,7 +47,7 @@ export const SPRITE_INFO = Object.fromEntries(
  */
 /** Los sprites de los autos están renderizados a SPRITE_RES veces la resolución de pantalla del juego (nitidez al hacer zoom y en pantallas de alta densidad). */
 export const SPRITE_RES = 2;
-export const SPRITE_SCALE: Record<SpriteKey, number> = { ecl: 1, sub: 0.939, sup: 1, r34: 1, evo: 1, rx7: 1, gtr: 1 };
+export const SPRITE_SCALE: Record<SpriteKey, number> = { ecl: 1, sub: 0.939, sup: 1, r34: 1, evo: 1, rx7: 1, gtr: 1, z350: 1 };
 
 /**
  * El fondo (garage_bg.png) se renderiza con margen extra alrededor del encuadre original 1920x1080

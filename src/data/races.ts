@@ -6,7 +6,7 @@ export const RACE_CD_MS = 60000;       // enfriamiento por auto
 export const LOSS_XP_RATIO = 0.25;     // XP de consolación al perder
 
 /** Rendimiento de arranque (0-100): sube con el precio del auto. Ver accelOf() en drag.ts. */
-export const RACE_POWER: Record<string, number> = { 'falcon-gt': 56, 'kobalt-22': 68, 'akane-rs': 80, 'nami-34': 91, 'shirogane-x': 100, 'ryoku-fd': 86, 'hoshi-r35': 104 };
+export const RACE_POWER: Record<string, number> = { 'falcon-gt': 56, 'kobalt-22': 68, 'akane-rs': 80, 'nami-34': 91, 'shirogane-x': 100, 'ryoku-fd': 86, 'hoshi-r35': 104, 'zenko-350': 74 };
 export const perf = (model: string) => RACE_POWER[model] ?? 50;
 /** Error de habilidad de la IA por categoría (menor = más preciso). */
 export const SKILL: Record<string, number> = { street: 0.05, amateur: 0.035, pro: 0.022, elite: 0.012, friend: 0.03 };

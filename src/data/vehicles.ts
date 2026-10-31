@@ -1,6 +1,6 @@
 // Datos de vehículos. Agregar un auto = agregar una entrada aquí + sus sprites renderizados.
 // Nombres ficticios: los modelos 3D de la escena son JDM originales del usuario, sin logos en el juego.
-export type SpriteKey = 'ecl' | 'sub' | 'sup' | 'r34' | 'evo' | 'rx7' | 'gtr';
+export type SpriteKey = 'ecl' | 'sub' | 'sup' | 'r34' | 'evo' | 'rx7' | 'gtr' | 'z350';
 
 export interface VehicleModel {
   id: string;
@@ -49,6 +49,11 @@ export const VEHICLES: VehicleModel[] = [
     id: 'hoshi-r35', name: 'Hoshi R35', tagline: 'Superdeportivo de tracción total con kit ancho. El más rápido del concesionario.',
     spriteKey: 'gtr', price: 220000, minLevel: 10, payBonus: 2.25,
     stats: { potencia: 100, agarre: 96, estilo: 92 },
+  },
+  {
+    id: 'zenko-350', name: 'Zenko 350', tagline: 'Coupé V6 con alerón. Equilibrado y fácil de llevar al límite.',
+    spriteKey: 'z350', price: 20000, minLevel: 4, payBonus: 1.4,
+    stats: { potencia: 76, agarre: 78, estilo: 80 },
   },
 ];
 
